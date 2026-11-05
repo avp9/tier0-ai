@@ -1,0 +1,137 @@
+[
+  {
+    "document_id": "pay-001",
+    "title": "Pay-Day Schedule",
+    "category": "Payroll & Compensation",
+    "source": "BuzzTech Payroll Guide (synthetic)",
+    "content": "Salaries are paid on the last working day of each month by direct deposit. If the last day of the month is a weekend or public holiday, payment is made on the preceding working day. Payroll inputs such as leave changes and expense claims must be submitted by the payroll cut-off on the 20th of the month to be included in that month's salary.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "pay-002",
+    "title": "Accessing Your Payslip",
+    "category": "Payroll & Compensation",
+    "source": "BuzzTech Payroll Guide (synthetic)",
+    "content": "Your payslip is published in the Employee Self-Service portal on the day salary is paid. You can view and download payslips for the past 36 months, and annual tax summaries for the past five years. Payslips are not sent by email, to protect your personal information.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "pay-003",
+    "title": "Salary Structure Components",
+    "category": "Payroll & Compensation",
+    "source": "BuzzTech Payroll Guide (synthetic)",
+    "content": "Your monthly salary has three parts: base pay, which is about 70 percent of fixed pay; a housing and living allowance, about 20 percent; and a special allowance, about 10 percent. Employer retirement plan contributions and group insurance premiums are paid on top of your fixed pay and are shown on your offer letter as benefits. Your exact breakdown is stated in your offer letter and on every payslip.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "pay-004",
+    "title": "Annual Tax Declaration",
+    "category": "Payroll & Compensation",
+    "source": "BuzzTech Payroll Guide (synthetic)",
+    "content": "Every employee submits a tax declaration once a year in January through the Employee Self-Service portal, listing planned investments and eligible deductions. Payroll uses the declaration to calculate monthly tax withholding for the rest of the financial year. A final proof submission window opens in February, when you upload supporting documents; unverified declarations are removed and any extra tax is deducted from the March salary.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "pay-005",
+    "title": "Changing Your Tax Declaration Mid-Year",
+    "category": "Payroll & Compensation",
+    "source": "BuzzTech Payroll Guide (synthetic)",
+    "content": "You may revise your tax declaration once during the financial year, between July 1 and July 31, for example after a change in your investments or family situation. Changes outside that window are only accepted for qualifying life events and need approval from the Payroll team. A revised declaration changes your monthly withholding from the next payroll cycle.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "pay-006",
+    "title": "Changing Your Bank Account",
+    "category": "Payroll & Compensation",
+    "source": "BuzzTech Payroll Guide (synthetic)",
+    "content": "To change your bank account, submit the new details and a cancelled cheque or bank statement in the Employee Self-Service portal. The change takes five business days to verify. If you submit it after the 20th of the month, your next salary may still go to the old account, so submit changes early.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "pay-007",
+    "title": "Annual Performance Bonus",
+    "category": "Payroll & Compensation",
+    "source": "BuzzTech Payroll Guide (synthetic)",
+    "content": "Eligible employees receive an annual performance bonus based on company results and their individual rating. Bonuses are paid with the March salary. Employees who joined after October 1 receive a pro-rated bonus, and employees who have resigned or are serving notice on the payment date are not eligible.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "pay-008",
+    "title": "Annual Salary Revision",
+    "category": "Payroll & Compensation",
+    "source": "BuzzTech Payroll Guide (synthetic)",
+    "content": "Salary revisions take effect on April 1 and are based on the annual performance review rating and market benchmarks. Employees receive their revision letters in late March. Employees who joined after October 1 become eligible for revision in the following cycle.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "pay-009",
+    "title": "Stock Option Vesting Schedule",
+    "category": "Payroll & Compensation",
+    "source": "BuzzTech Equity Plan Summary (synthetic)",
+    "content": "Stock options granted under the BuzzTech Equity Plan vest over four years with a one-year cliff. No options vest before your first anniversary; at the cliff, 25 percent vests, and the remaining 75 percent vests in equal monthly instalments over the next 36 months. Your grant letter shows your number of options, the grant date, and the exercise price.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "pay-010",
+    "title": "Exercising Vested Stock Options",
+    "category": "Payroll & Compensation",
+    "source": "BuzzTech Equity Plan Summary (synthetic)",
+    "content": "You can exercise vested options during the two exercise windows each year, in May and in November. You pay the exercise price per share plus applicable taxes, and shares are credited to your equity account within ten business days. Options that have not vested are cancelled when your employment ends.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "pay-011",
+    "title": "Stock Options After Leaving BuzzTech",
+    "category": "Payroll & Compensation",
+    "source": "BuzzTech Equity Plan Summary (synthetic)",
+    "content": "After your last working day you have 90 days to exercise any options that have already vested. Options that are unvested on your last day are cancelled. If you are terminated for misconduct, all options, including vested ones, are cancelled.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "pay-012",
+    "title": "Salary Advance",
+    "category": "Payroll & Compensation",
+    "source": "BuzzTech Payroll Guide (synthetic)",
+    "content": "Confirmed employees can request one emergency salary advance per year of up to one month's base pay. Requests are made to People Operations with your manager's approval and are recovered in up to six equal monthly deductions. Advances are not available during probation or the notice period.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "pay-013",
+    "title": "Salary Deductions for Unpaid Leave",
+    "category": "Payroll & Compensation",
+    "source": "BuzzTech Payroll Guide (synthetic)",
+    "content": "If you take leave without pay, your salary is reduced by one thirtieth of your monthly fixed pay for each day. Leave without pay is applied in the payroll cycle after the leave is approved or recorded. Weekends and public holidays that fall between two days of unpaid leave are also counted as unpaid.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "pay-014",
+    "title": "Final Settlement When You Leave",
+    "category": "Payroll & Compensation",
+    "source": "BuzzTech Payroll Guide (synthetic)",
+    "content": "Your final settlement includes salary up to your last working day, encashment of unused earned leave, and any pending expense claims, less recoveries such as unreturned equipment or unserved notice. It is paid within 45 days of your last working day, after the exit clearance process is complete. You will receive a settlement statement and your experience letter on the same day.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "pay-015",
+    "title": "Payslip or Salary Errors",
+    "category": "Payroll & Compensation",
+    "source": "BuzzTech Payroll Guide (synthetic)",
+    "content": "If you think your payslip is wrong, contact the Payroll team within 30 days of the pay date and include the month and the amount you believe is incorrect. Confirmed errors are corrected in the next payroll cycle, or paid out separately if the difference is more than one week's pay. If you cannot find the answer in this assistant, ask it to raise a support ticket.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  }
+]

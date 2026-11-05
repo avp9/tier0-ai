@@ -1,0 +1,110 @@
+[
+  {
+    "document_id": "onb-001",
+    "title": "Day-One Checklist",
+    "category": "Onboarding",
+    "source": "BuzzTech New Hire Guide (synthetic)",
+    "content": "On your first day, arrive at the main reception by 9:30 AM and ask for People Operations. You will complete identity verification, sign your employment documents, collect your ID badge, and attend the 11:00 AM orientation session. After lunch, visit the IT Service Desk to collect your laptop and set up your accounts. Your manager will meet you at 3:00 PM to walk through your first-week plan.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "onb-002",
+    "title": "Documents to Bring on Your First Day",
+    "category": "Onboarding",
+    "source": "BuzzTech New Hire Guide (synthetic)",
+    "content": "Bring one government-issued photo ID, proof of your address, your signed offer letter, your bank account details for payroll, and your tax identification number. If you worked elsewhere before, also bring your last relieving letter and most recent payslip. People Operations will not be able to activate your payroll record until the bank details and tax number are submitted.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "onb-003",
+    "title": "Equipment Allocation for New Hires",
+    "category": "Onboarding",
+    "source": "BuzzTech New Hire Guide (synthetic)",
+    "content": "Every new hire receives a company laptop, a power adapter, a wireless mouse, and a laptop bag. Engineers and designers may also request one external monitor during their first week through the IT Service Desk. Equipment remains company property and must be returned on your last working day. Report any damage or loss to the IT Service Desk within 24 hours.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "onb-004",
+    "title": "Laptop Setup and First Login",
+    "category": "Onboarding",
+    "source": "BuzzTech New Hire Guide (synthetic)",
+    "content": "The IT Service Desk pre-installs your laptop with the standard BuzzTech image, which includes the VPN client, the collaboration suite, and disk encryption. On first login you must change your temporary password and enroll in multi-factor authentication. You should complete both steps before leaving the IT Service Desk so that support staff can help if anything fails.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "onb-005",
+    "title": "Benefits Enrollment Window",
+    "category": "Onboarding",
+    "source": "BuzzTech New Hire Guide (synthetic)",
+    "content": "You must enroll in benefits within 30 calendar days of your joining date. Benefits include group health insurance, optional dental and vision cover, life insurance, and the BuzzTech Retirement Plan. If you miss the 30-day window, you can only enroll during the annual open enrollment period in November, unless you have a qualifying life event such as marriage or the birth of a child.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "onb-006",
+    "title": "Adding Dependants to Your Health Insurance",
+    "category": "Onboarding",
+    "source": "BuzzTech New Hire Guide (synthetic)",
+    "content": "You can add your spouse and up to three children to the group health insurance during your enrollment window. You will need to upload a marriage certificate or birth certificate for each dependant. Dependants added after the 30-day window require a qualifying life event and must be submitted to People Operations within 30 days of that event.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "onb-007",
+    "title": "Buddy Programme",
+    "category": "Onboarding",
+    "source": "BuzzTech New Hire Guide (synthetic)",
+    "content": "Every new hire is paired with a buddy, a peer from a different team who has been at BuzzTech for at least one year. Your buddy is your informal guide for the first 90 days: they answer everyday questions, introduce you to colleagues, and join you for a weekly 30-minute catch-up. The buddy relationship is separate from your manager's feedback and is not used for performance evaluation.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "onb-008",
+    "title": "Probation Period",
+    "category": "Onboarding",
+    "source": "BuzzTech New Hire Guide (synthetic)",
+    "content": "All new employees serve a probation period of three months. Your manager holds check-ins at 30, 60, and 80 days and records a written confirmation decision before the period ends. Probation can be extended once, by up to three months, if more time is needed to assess performance. During probation, either party may end employment with 15 days' written notice.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "onb-009",
+    "title": "Probation Confirmation and Leave During Probation",
+    "category": "Onboarding",
+    "source": "BuzzTech New Hire Guide (synthetic)",
+    "content": "When you pass probation you receive a written confirmation letter and your standard notice period of 60 days takes effect. You accrue leave from your first day, but earned leave can only be used after probation is confirmed. Casual and sick leave can be used during probation.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "onb-010",
+    "title": "Mandatory Training for New Hires",
+    "category": "Onboarding",
+    "source": "BuzzTech New Hire Guide (synthetic)",
+    "content": "Within your first two weeks you must complete four mandatory online modules: Information Security Basics, Code of Conduct, Anti-Harassment and Respect at Work, and Data Privacy. Each module takes about 30 minutes and ends with a short quiz that requires 80 percent to pass. Completion is tracked in the learning portal, and your manager is notified if modules are overdue.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "onb-011",
+    "title": "Setting Up Your Payroll Details",
+    "category": "Onboarding",
+    "source": "BuzzTech New Hire Guide (synthetic)",
+    "content": "Submit your bank account number, bank name, and tax identification number through the Employee Self-Service portal during your first week. People Operations verifies the details within three business days. If your details are not verified before the payroll cut-off on the 20th of the month, your first salary is paid with the following month's payroll.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "onb-012",
+    "title": "Who to Contact During Onboarding",
+    "category": "Onboarding",
+    "source": "BuzzTech New Hire Guide (synthetic)",
+    "content": "For questions about contracts, benefits, or documents, contact People Operations. For laptop, accounts, and access problems, contact the IT Service Desk. For questions about your role and first-week plan, ask your manager or your buddy. If you cannot find an answer in this assistant, you can ask it to raise a support ticket on your behalf.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  }
+]

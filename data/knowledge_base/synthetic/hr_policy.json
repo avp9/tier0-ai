@@ -1,0 +1,263 @@
+[
+  {
+    "document_id": "hr-001",
+    "title": "Casual Leave",
+    "category": "HR Policy",
+    "source": "BuzzTech Employee Handbook (synthetic)",
+    "content": "Every employee receives 12 days of casual leave per calendar year, credited in full on January 1 (pro-rated in your first year). Casual leave is for short, unplanned needs and may be taken in half-day units. Unused casual leave lapses on December 31 and is not carried forward or encashed.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "hr-002",
+    "title": "Sick Leave",
+    "category": "HR Policy",
+    "source": "BuzzTech Employee Handbook (synthetic)",
+    "content": "Employees receive 10 days of paid sick leave per calendar year. Inform your manager as early as possible on the first day of absence. If you are away for more than three consecutive days, submit a medical certificate within three days of returning to work. Unused sick leave lapses at year end and cannot be encashed.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "hr-003",
+    "title": "Earned Leave",
+    "category": "HR Policy",
+    "source": "BuzzTech Employee Handbook (synthetic)",
+    "content": "Earned leave, also called annual leave, accrues at 1.5 days per month, giving 18 days per year. It can be used only after probation is confirmed. Requests for three or more consecutive days need at least five working days' notice and your manager's approval in the Employee Self-Service portal.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "hr-004",
+    "title": "Carrying Forward and Encashing Earned Leave",
+    "category": "HR Policy",
+    "source": "BuzzTech Employee Handbook (synthetic)",
+    "content": "You can carry forward up to 10 days of unused earned leave into the next year; anything above 10 days lapses on December 31. Your earned leave balance is capped at 30 days at any time. Unused earned leave is encashed at base-pay rates in your final settlement when you leave BuzzTech.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "hr-005",
+    "title": "Public Holidays",
+    "category": "HR Policy",
+    "source": "BuzzTech Employee Handbook (synthetic)",
+    "content": "BuzzTech observes 12 fixed public holidays each year, published by People Operations in December for the coming year. In addition, every employee has two floating holidays to use for personal or regional festivals; floating holidays must be requested at least one week ahead and cannot be carried forward.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "hr-006",
+    "title": "How to Apply for Leave",
+    "category": "HR Policy",
+    "source": "BuzzTech Employee Handbook (synthetic)",
+    "content": "Apply for all leave in the Employee Self-Service portal by choosing the leave type, dates, and a short reason. Your manager receives the request and has three working days to approve or decline it. If the request is not actioned in three working days, it is escalated to the next-level manager. Leave is not approved until the portal shows the status Approved.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "hr-007",
+    "title": "Maternity Leave",
+    "category": "HR Policy",
+    "source": "BuzzTech Employee Handbook (synthetic)",
+    "content": "Eligible employees receive 26 weeks of paid maternity leave. Leave may start up to four weeks before the expected delivery date. Notify People Operations at least eight weeks before your expected leave start so that your cover and benefits can be arranged. Employees who have not completed probation should speak to People Operations about their options.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "hr-008",
+    "title": "Paternity and Adoption Leave",
+    "category": "HR Policy",
+    "source": "BuzzTech Employee Handbook (synthetic)",
+    "content": "New fathers and partners receive 10 working days of paid paternity leave, which can be taken within the first six months after the birth. Employees who adopt a child are entitled to the same number of days as paternity leave. Request this leave in the Employee Self-Service portal and attach supporting documents.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "hr-009",
+    "title": "Bereavement and Marriage Leave",
+    "category": "HR Policy",
+    "source": "BuzzTech Employee Handbook (synthetic)",
+    "content": "Employees receive five paid days of bereavement leave on the death of an immediate family member, and five paid days of marriage leave on their own marriage. Both can be taken in a single block, and neither reduces your casual, sick, or earned leave balance. Inform your manager and People Operations as soon as you can.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "hr-010",
+    "title": "Leave Without Pay",
+    "category": "HR Policy",
+    "source": "BuzzTech Employee Handbook (synthetic)",
+    "content": "Leave without pay may be granted for up to 30 days in a year when you have used all other leave, and needs approval from your manager and People Operations. Benefits such as health insurance continue during approved unpaid leave. Unapproved absence is treated as leave without pay and may lead to disciplinary action if it continues.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "hr-011",
+    "title": "Hybrid Work Policy",
+    "category": "HR Policy",
+    "source": "BuzzTech Employee Handbook (synthetic)",
+    "content": "BuzzTech follows a hybrid model: employees work in the office three days a week, Tuesday to Thursday, and may work from home on Monday and Friday. Roles that require lab or hardware access may have different in-office days, which your manager will confirm. Team events and onboarding sessions take priority over remote days.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "hr-012",
+    "title": "Core Working Hours",
+    "category": "HR Policy",
+    "source": "BuzzTech Employee Handbook (synthetic)",
+    "content": "Whether you work from home or the office, be available online during core hours, 11:00 AM to 4:00 PM in your local time zone. Outside core hours you can arrange your working day flexibly, as long as you complete your agreed hours and your team's commitments. Keep your calendar updated so colleagues can see when you are available.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "hr-013",
+    "title": "Working From Home for an Extended Period",
+    "category": "HR Policy",
+    "source": "BuzzTech Employee Handbook (synthetic)",
+    "content": "If you need to work remotely for more than five consecutive working days outside the normal hybrid pattern, get written approval from your manager and notify People Operations. Working from another country is not allowed without prior approval from People Operations, because it can affect tax and legal obligations. Requests should be made at least two weeks in advance.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "hr-014",
+    "title": "Home Working Allowance and Equipment",
+    "category": "HR Policy",
+    "source": "BuzzTech Employee Handbook (synthetic)",
+    "content": "Employees on the hybrid model receive a monthly remote-work allowance of 40 USD toward internet and utilities, paid with salary. Company equipment such as your laptop can be used at home, but must be kept secure and used only by you. You must connect to the corporate VPN when accessing internal systems from home.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "hr-015",
+    "title": "Submitting Expense Reimbursements",
+    "category": "HR Policy",
+    "source": "BuzzTech Employee Handbook (synthetic)",
+    "content": "Submit business expense claims in the expense tool within 30 days of the expense. Attach an itemised receipt for any expense above 10 USD, and select the project or cost centre. Approved claims are paid with the next payroll if approved before the 20th, and with the following month's payroll otherwise.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "hr-016",
+    "title": "Travel Expense Rules",
+    "category": "HR Policy",
+    "source": "BuzzTech Employee Handbook (synthetic)",
+    "content": "Business travel must be approved by your manager before booking. Flights are economy class, hotels are reimbursed up to 150 USD per night, and meals up to 40 USD per day while travelling. Book through the company travel desk where possible. Personal extensions to a business trip are at your own cost.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "hr-017",
+    "title": "Client Meals and Team Events",
+    "category": "HR Policy",
+    "source": "BuzzTech Employee Handbook (synthetic)",
+    "content": "Meals with clients are reimbursed up to 25 USD per person with prior manager approval, and the receipt must list all attendees. Team events are funded from the department budget and need the department head's approval before booking. Alcohol is not reimbursable under any category.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "hr-018",
+    "title": "Code of Conduct Overview",
+    "category": "HR Policy",
+    "source": "BuzzTech Employee Handbook (synthetic)",
+    "content": "BuzzTech expects every employee to act with integrity, respect colleagues and clients, protect company and customer information, and follow the law. Discrimination, harassment, bullying, dishonesty, and misuse of company resources are not tolerated. The Code of Conduct applies to everyone, at every level, in the office, remotely, and at company events.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "hr-019",
+    "title": "Conflicts of Interest and Gifts",
+    "category": "HR Policy",
+    "source": "BuzzTech Employee Handbook (synthetic)",
+    "content": "Disclose any outside business interest, second job, or family relationship that could affect your work to your manager and People Operations. Gifts from clients or suppliers worth more than 50 USD must be declined or reported, and cash gifts are never acceptable. Failure to disclose a conflict of interest can lead to disciplinary action.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "hr-020",
+    "title": "Confidentiality and Data Protection",
+    "category": "HR Policy",
+    "source": "BuzzTech Employee Handbook (synthetic)",
+    "content": "You must keep customer data, financial information, and unreleased product details confidential during and after your employment. Do not store company data on personal devices or personal cloud accounts. Report any suspected data leak or lost device to the IT Service Desk immediately, within one hour of noticing it.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "hr-021",
+    "title": "Social Media Use",
+    "category": "HR Policy",
+    "source": "BuzzTech Employee Handbook (synthetic)",
+    "content": "You may use social media in a personal capacity, but you must not share confidential information, speak on behalf of BuzzTech without authorisation, or post content that harasses or discriminates against others. If you identify yourself as a BuzzTech employee, make it clear that your views are your own.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "hr-022",
+    "title": "Anti-Harassment Policy",
+    "category": "HR Policy",
+    "source": "BuzzTech Employee Handbook (synthetic)",
+    "content": "BuzzTech has zero tolerance for harassment, including sexual harassment, based on gender, race, religion, age, disability, sexual orientation, or any other protected characteristic. This covers behaviour in person, online, and at work-related events. Harassment can be a single serious incident or a pattern of repeated conduct.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "hr-023",
+    "title": "Reporting Harassment and the Investigation Process",
+    "category": "HR Policy",
+    "source": "BuzzTech Employee Handbook (synthetic)",
+    "content": "Report harassment to People Operations, your manager, or the confidential ethics line, which is open 24 hours and can be used anonymously. The Internal Committee acknowledges every report within two working days and aims to complete its investigation within 30 days. Both parties are heard, and the findings are shared with them in writing.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "hr-024",
+    "title": "Protection From Retaliation",
+    "category": "HR Policy",
+    "source": "BuzzTech Employee Handbook (synthetic)",
+    "content": "BuzzTech prohibits retaliation against anyone who raises a concern in good faith or takes part in an investigation. Retaliation includes demotion, exclusion, or threats. If you think you are being retaliated against, report it to People Operations or the ethics line; retaliation is treated as serious misconduct.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "hr-025",
+    "title": "Performance Review Cycle",
+    "category": "HR Policy",
+    "source": "BuzzTech Employee Handbook (synthetic)",
+    "content": "BuzzTech runs two review cycles a year. The mid-year check-in takes place in July and is a development conversation without a rating. The annual review takes place in January and includes a self-assessment, manager assessment, and a final rating. Goals are set in April for the new cycle, and your manager discusses your rating with you in a one-to-one meeting.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "hr-026",
+    "title": "Performance Rating Scale",
+    "category": "HR Policy",
+    "source": "BuzzTech Employee Handbook (synthetic)",
+    "content": "Annual performance is rated on a five-point scale: 1 Needs Improvement, 2 Partially Meets Expectations, 3 Meets Expectations, 4 Exceeds Expectations, and 5 Outstanding. Ratings are calibrated across teams by department heads to keep them consistent. Your rating affects your annual bonus and salary revision.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "hr-027",
+    "title": "Performance Improvement Plan",
+    "category": "HR Policy",
+    "source": "BuzzTech Employee Handbook (synthetic)",
+    "content": "If your performance is below expectations, your manager may place you on a 60-day Performance Improvement Plan with clear goals and weekly check-ins. People Operations is informed and you can ask for support or training. If the goals are met, the plan ends; if they are not, further action may follow, including termination.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "hr-028",
+    "title": "Resignation and Notice Period",
+    "category": "HR Policy",
+    "source": "BuzzTech Employee Handbook (synthetic)",
+    "content": "To resign, submit your written resignation to your manager and People Operations. Confirmed employees serve a 60-day notice period, which may be shortened by mutual agreement or by using earned leave balance with approval. You must complete handover, return company equipment, and complete exit clearance before your final settlement is released.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "hr-029",
+    "title": "Raising a Workplace Grievance",
+    "category": "HR Policy",
+    "source": "BuzzTech Employee Handbook (synthetic)",
+    "content": "If you have a concern about your treatment at work that is not covered by another policy, first try to resolve it with your manager. If that is not possible, raise it with People Operations in writing. People Operations will respond within five working days and meet you within ten working days. You may bring a colleague to the meeting for support.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  }
+]
