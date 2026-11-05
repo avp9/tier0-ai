@@ -3,7 +3,9 @@ name = "tier0"
 version = "0.1.0"
 description = "Tier0 AI: intelligent IT & HR operations agent"
 requires-python = ">=3.12,<3.13"
-dependencies = []
+dependencies = [
+    "pydantic>=2.14.3",
+]
 
 [dependency-groups]
 dev = ["pytest>=8", "ruff>=0.6", "mypy>=1.11"]
