@@ -11,9 +11,7 @@ from datasets import load_dataset
 DATASETS = [
     "strova-ai/hr-policies-qa-dataset",  # MIT
     "SaumyaGupta/hr-policies-qa-dataset",  # MIT
-    "Console-AI/IT-helpdesk-synthetic-tickets",  # MIT
     "KameronB/synthetic-it-callcenter-tickets",  # Apache-2.0
-    "parth1609/IT_ticket_dataset",  # MIT
 ]
 
 OUTPUT_PATH = (
@@ -163,16 +161,9 @@ def convert_row(row, source, tick_num):
     question = get_value(row, QUESTION_KEYS)
     answer = get_value(row, ANSWER_KEYS)
 
-    # A classification dataset may not contain a response.
-    # Preserve its label instead of inventing a solution.
-    if not answer:
-        label = get_value(row, CATEGORY_KEYS)
-        if label and question:
-            answer = f"Ticket category: {label}."
-        else:
-            return []
-
-    if not question:
+    # Classification datasets have no response text. A category label is not knowledge,
+    # so such rows are skipped rather than given a made-up answer.
+    if not answer or not question:
         return []
 
     return [{

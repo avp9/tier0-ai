@@ -4,7 +4,7 @@
 
 ## Context
 
-The knowledge base is ~50k entries (`qa_dataset.json` plus synthetic Onboarding/Payroll content). Embedding it with OpenAI takes several minutes and costs a small amount per run. Chroma persists its index as local files backed by SQLite. On Azure Container Apps, container filesystems are ephemeral, and the hosting budget should stay as low as possible.
+The knowledge base is ~21k entries (`qa_dataset.json.gz` plus synthetic Onboarding/Payroll content). Embedding it with OpenAI takes several minutes and costs a small amount per run. Chroma persists its index as local files backed by SQLite. On Azure Container Apps, container filesystems are ephemeral, and the hosting budget should stay as low as possible.
 
 Alternatives considered:
 
@@ -21,6 +21,6 @@ A CI job builds the Chroma index from the knowledge-base files and copies it int
 
 - No extra Azure service; staging and production get an identical, versioned index with each image.
 - Any knowledge-base change requires a new image and deploy. That's acceptable because content changes go through PRs anyway.
-- The image is larger (index on the order of hundreds of MB), which lengthens cold starts after scale-to-zero.
+- The image is larger (index on the order of 100-200 MB for about 21k vectors; measure it in T19), which lengthens cold starts after scale-to-zero.
 - Building the index needs the OpenAI key in CI, but only on the main-branch build path, never on PRs from forks.
 - The app cannot add knowledge at runtime. If that becomes a requirement, revisit with a Chroma server or pgvector.
