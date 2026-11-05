@@ -1,21 +1,24 @@
 
+import gzip
 import json
 import re
 from pathlib import Path
 
 from datasets import load_dataset
 
+# Only sources whose declared licence permits redistribution with attribution.
+# Licences and exclusions are documented in data/knowledge_base/SOURCES.md.
 DATASETS = [
-    "strova-ai/hr-policies-qa-dataset",
-    "EmbraceCoder/HR_Policy",
-    "EmbraceCoder/New_Hr_Policy",
-    "SaumyaGupta/hr-policies-qa-dataset",
-    "Console-AI/IT-helpdesk-synthetic-tickets",
-    "KameronB/synthetic-it-callcenter-tickets",
-    "parth1609/IT_ticket_dataset",
-    "interneuronai/it_support_ticket_classification_pegasus_dataset",
-    "w1z4rd3k/it-support-l1-ticket-classification",
+    "strova-ai/hr-policies-qa-dataset",  # MIT
+    "SaumyaGupta/hr-policies-qa-dataset",  # MIT
+    "Console-AI/IT-helpdesk-synthetic-tickets",  # MIT
+    "KameronB/synthetic-it-callcenter-tickets",  # Apache-2.0
+    "parth1609/IT_ticket_dataset",  # MIT
 ]
+
+OUTPUT_PATH = (
+    Path(__file__).resolve().parent.parent / "data" / "knowledge_base" / "qa_dataset.json.gz"
+)
 
 QUESTION_KEYS = [
     "question", "user_message", "query", "prompt",
@@ -233,11 +236,10 @@ def main():
             })
             print(f"  FAILED: {exc}")
 
-    output = Path("qa_dataset.json")
-    output.write_text(
-        json.dumps(records, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
+    output = OUTPUT_PATH
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with gzip.open(output, "wt", encoding="utf-8", compresslevel=9) as handle:
+        json.dump(records, handle, ensure_ascii=False, separators=(",", ":"))
 
     print(f"\nOutput: {output.resolve()}")
     print(f"Total unique records: {len(records)}")
