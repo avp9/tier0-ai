@@ -1,0 +1,160 @@
+{
+  "version": 1,
+  "description": "Topics deliberately absent from the BuzzTech knowledge base (Knowledge Gaps). Questions about these must lead to an offer to raise a Ticket, never an answer. 'patterns' are case-insensitive regexes used to remove matching entries from the knowledge base and to guard against future content (including synthetic entries) covering them.",
+  "topics": [
+    {
+      "id": "monitor-flicker",
+      "name": "Monitor flickering",
+      "domain": "IT",
+      "patterns": ["flicker", "screen (is |keeps )?(blink|flash)", "monitor.{0,30}(blink|flash)"],
+      "example_questions": [
+        "My monitor keeps flickering, how do I fix it?",
+        "The screen on my external display flickers every few seconds.",
+        "Why does my monitor flicker when I plug in my laptop?"
+      ]
+    },
+    {
+      "id": "projector",
+      "name": "Projector and meeting-room display problems",
+      "domain": "IT",
+      "patterns": ["projector"],
+      "example_questions": [
+        "The projector in the meeting room will not turn on.",
+        "How do I connect my laptop to the projector?",
+        "The projector image is blurry, who can fix it?"
+      ]
+    },
+    {
+      "id": "ergonomic-furniture",
+      "name": "Ergonomic equipment and standing desks",
+      "domain": "IT",
+      "patterns": ["ergonomic", "standing desk", "desk chair"],
+      "example_questions": [
+        "Can I get a standing desk?",
+        "How do I request an ergonomic keyboard and chair?",
+        "My desk chair is broken, who do I contact?"
+      ]
+    },
+    {
+      "id": "office-parking",
+      "name": "Office parking",
+      "domain": "Facilities",
+      "patterns": ["\\bparking\\b", "\\bcar park\\b", "\\bpark (my|the|a) (car|bike|vehicle)"],
+      "example_questions": [
+        "Where can I park my car at the office?",
+        "How do I get a parking permit?",
+        "Can I park my car in the company garage?"
+      ]
+    },
+    {
+      "id": "cafeteria",
+      "name": "Cafeteria and food",
+      "domain": "Facilities",
+      "patterns": ["cafeteria", "canteen", "lunch menu", "vending machine"],
+      "example_questions": [
+        "What is on the cafeteria menu today?",
+        "What are the canteen opening hours?",
+        "Is there a vending machine on the third floor?"
+      ]
+    },
+    {
+      "id": "gym-wellness",
+      "name": "Gym and wellness benefits",
+      "domain": "HR",
+      "patterns": ["\\bgym\\b", "fitness cent(er|re)", "wellness stipend"],
+      "example_questions": [
+        "Does BuzzTech reimburse gym memberships?",
+        "Is there a fitness center in the office?",
+        "How do I claim the wellness stipend?"
+      ]
+    },
+    {
+      "id": "dress-code",
+      "name": "Dress code",
+      "domain": "HR",
+      "patterns": ["dress code", "business casual", "\\battire\\b"],
+      "example_questions": [
+        "What is the dress code at BuzzTech?",
+        "Is business casual required on client days?",
+        "What does the dress code say about wearing jeans on Fridays?"
+      ]
+    },
+    {
+      "id": "pet-policy",
+      "name": "Pets in the office",
+      "domain": "HR",
+      "patterns": ["\\bpets?\\b", "\\bdogs?\\b"],
+      "example_questions": [
+        "Can I bring my dog to the office?",
+        "What is the pet policy?",
+        "Are pets allowed on remote-work days at the co-working space?"
+      ]
+    },
+    {
+      "id": "commute-shuttle",
+      "name": "Shuttle and commute benefits",
+      "domain": "HR",
+      "patterns": ["shuttle", "commut(e|ing|er)", "transit pass", "\\bbus pass\\b"],
+      "example_questions": [
+        "Is there a shuttle from the train station to the office?",
+        "Does the company offer a transit pass?",
+        "Do you reimburse my daily commute?"
+      ]
+    },
+    {
+      "id": "childcare",
+      "name": "Childcare support",
+      "domain": "HR",
+      "patterns": ["daycare", "day care", "child ?care"],
+      "example_questions": [
+        "Does BuzzTech offer childcare support?",
+        "Is there a daycare near the office that employees can use?",
+        "Can I get a childcare allowance?"
+      ]
+    },
+    {
+      "id": "visa-immigration",
+      "name": "Visa and immigration support",
+      "domain": "HR",
+      "patterns": ["\\bvisa\\b", "immigration", "work permit"],
+      "example_questions": [
+        "Will the company sponsor my work visa?",
+        "Who handles immigration paperwork?",
+        "How do I apply for a work permit extension?"
+      ]
+    },
+    {
+      "id": "relocation",
+      "name": "Relocation assistance",
+      "domain": "HR",
+      "patterns": ["relocation", "relocate", "moving allowance"],
+      "example_questions": [
+        "Is there relocation assistance if I move cities?",
+        "Can I relocate to another office?",
+        "Does BuzzTech pay a moving allowance?"
+      ]
+    },
+    {
+      "id": "sabbatical",
+      "name": "Sabbatical leave",
+      "domain": "HR",
+      "patterns": ["sabbatical"],
+      "example_questions": [
+        "Can I take a sabbatical after five years?",
+        "What is the sabbatical policy?",
+        "How do I apply for sabbatical leave?"
+      ]
+    },
+    {
+      "id": "tuition-assistance",
+      "name": "Tuition and course reimbursement",
+      "domain": "HR",
+      "patterns": ["tuition", "education assistance", "course reimbursement"],
+      "example_questions": [
+        "Does the company pay for my MBA tuition?",
+        "Is there an education assistance program?",
+        "How do I get a course reimbursement?"
+      ]
+    }
+  ]
+}
