@@ -48,4 +48,4 @@ jobs:
       - run: uv python install 3.12
       - run: uv sync --locked
       - name: Audit locked dependencies
-        run: uv export --locked --no-hashes --no-emit-project > /tmp/requirements.txt && uvx pip-audit -r /tmp/requirements.txt --disable-pip
+        run: uv export --locked --no-hashes --no-emit-project > /tmp/requirements.txt && uvx pip-audit -r /tmp/requirements.txt --no-deps --disable-pip
