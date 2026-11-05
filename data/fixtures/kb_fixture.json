@@ -1,0 +1,542 @@
+[
+  {
+    "document_id": "hr-001",
+    "title": "Casual Leave",
+    "category": "HR Policy",
+    "source": "BuzzTech Employee Handbook (synthetic)",
+    "content": "Every employee receives 12 days of casual leave per calendar year, credited in full on January 1 (pro-rated in your first year). Casual leave is for short, unplanned needs and may be taken in half-day units. Unused casual leave lapses on December 31 and is not carried forward or encashed.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "hr-003",
+    "title": "Earned Leave",
+    "category": "HR Policy",
+    "source": "BuzzTech Employee Handbook (synthetic)",
+    "content": "Earned leave, also called annual leave, accrues at 1.5 days per month, giving 18 days per year. It can be used only after probation is confirmed. Requests for three or more consecutive days need at least five working days' notice and your manager's approval in the Employee Self-Service portal.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "hr-005",
+    "title": "Public Holidays",
+    "category": "HR Policy",
+    "source": "BuzzTech Employee Handbook (synthetic)",
+    "content": "BuzzTech observes 12 fixed public holidays each year, published by People Operations in December for the coming year. In addition, every employee has two floating holidays to use for personal or regional festivals; floating holidays must be requested at least one week ahead and cannot be carried forward.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "hr-007",
+    "title": "Maternity Leave",
+    "category": "HR Policy",
+    "source": "BuzzTech Employee Handbook (synthetic)",
+    "content": "Eligible employees receive 26 weeks of paid maternity leave. Leave may start up to four weeks before the expected delivery date. Notify People Operations at least eight weeks before your expected leave start so that your cover and benefits can be arranged. Employees who have not completed probation should speak to People Operations about their options.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "hr-009",
+    "title": "Bereavement and Marriage Leave",
+    "category": "HR Policy",
+    "source": "BuzzTech Employee Handbook (synthetic)",
+    "content": "Employees receive five paid days of bereavement leave on the death of an immediate family member, and five paid days of marriage leave on their own marriage. Both can be taken in a single block, and neither reduces your casual, sick, or earned leave balance. Inform your manager and People Operations as soon as you can.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "hr-011",
+    "title": "Hybrid Work Policy",
+    "category": "HR Policy",
+    "source": "BuzzTech Employee Handbook (synthetic)",
+    "content": "BuzzTech follows a hybrid model: employees work in the office three days a week, Tuesday to Thursday, and may work from home on Monday and Friday. Roles that require lab or hardware access may have different in-office days, which your manager will confirm. Team events and onboarding sessions take priority over remote days.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "hr-013",
+    "title": "Working From Home for an Extended Period",
+    "category": "HR Policy",
+    "source": "BuzzTech Employee Handbook (synthetic)",
+    "content": "If you need to work remotely for more than five consecutive working days outside the normal hybrid pattern, get written approval from your manager and notify People Operations. Working from another country is not allowed without prior approval from People Operations, because it can affect tax and legal obligations. Requests should be made at least two weeks in advance.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "hr-015",
+    "title": "Submitting Expense Reimbursements",
+    "category": "HR Policy",
+    "source": "BuzzTech Employee Handbook (synthetic)",
+    "content": "Submit business expense claims in the expense tool within 30 days of the expense. Attach an itemised receipt for any expense above 10 USD, and select the project or cost centre. Approved claims are paid with the next payroll if approved before the 20th, and with the following month's payroll otherwise.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "hr-017",
+    "title": "Client Meals and Team Events",
+    "category": "HR Policy",
+    "source": "BuzzTech Employee Handbook (synthetic)",
+    "content": "Meals with clients are reimbursed up to 25 USD per person with prior manager approval, and the receipt must list all attendees. Team events are funded from the department budget and need the department head's approval before booking. Alcohol is not reimbursable under any category.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "hr-019",
+    "title": "Conflicts of Interest and Gifts",
+    "category": "HR Policy",
+    "source": "BuzzTech Employee Handbook (synthetic)",
+    "content": "Disclose any outside business interest, second job, or family relationship that could affect your work to your manager and People Operations. Gifts from clients or suppliers worth more than 50 USD must be declined or reported, and cash gifts are never acceptable. Failure to disclose a conflict of interest can lead to disciplinary action.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "hr-021",
+    "title": "Social Media Use",
+    "category": "HR Policy",
+    "source": "BuzzTech Employee Handbook (synthetic)",
+    "content": "You may use social media in a personal capacity, but you must not share confidential information, speak on behalf of BuzzTech without authorisation, or post content that harasses or discriminates against others. If you identify yourself as a BuzzTech employee, make it clear that your views are your own.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "hr-023",
+    "title": "Reporting Harassment and the Investigation Process",
+    "category": "HR Policy",
+    "source": "BuzzTech Employee Handbook (synthetic)",
+    "content": "Report harassment to People Operations, your manager, or the confidential ethics line, which is open 24 hours and can be used anonymously. The Internal Committee acknowledges every report within two working days and aims to complete its investigation within 30 days. Both parties are heard, and the findings are shared with them in writing.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "hr-025",
+    "title": "Performance Review Cycle",
+    "category": "HR Policy",
+    "source": "BuzzTech Employee Handbook (synthetic)",
+    "content": "BuzzTech runs two review cycles a year. The mid-year check-in takes place in July and is a development conversation without a rating. The annual review takes place in January and includes a self-assessment, manager assessment, and a final rating. Goals are set in April for the new cycle, and your manager discusses your rating with you in a one-to-one meeting.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "hr-027",
+    "title": "Performance Improvement Plan",
+    "category": "HR Policy",
+    "source": "BuzzTech Employee Handbook (synthetic)",
+    "content": "If your performance is below expectations, your manager may place you on a 60-day Performance Improvement Plan with clear goals and weekly check-ins. People Operations is informed and you can ask for support or training. If the goals are met, the plan ends; if they are not, further action may follow, including termination.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "hr-029",
+    "title": "Raising a Workplace Grievance",
+    "category": "HR Policy",
+    "source": "BuzzTech Employee Handbook (synthetic)",
+    "content": "If you have a concern about your treatment at work that is not covered by another policy, first try to resolve it with your manager. If that is not possible, raise it with People Operations in writing. People Operations will respond within five working days and meet you within ten working days. You may bring a colleague to the meeting for support.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "onb-002",
+    "title": "Documents to Bring on Your First Day",
+    "category": "Onboarding",
+    "source": "BuzzTech New Hire Guide (synthetic)",
+    "content": "Bring one government-issued photo ID, proof of your address, your signed offer letter, your bank account details for payroll, and your tax identification number. If you worked elsewhere before, also bring your last relieving letter and most recent payslip. People Operations will not be able to activate your payroll record until the bank details and tax number are submitted.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "onb-004",
+    "title": "Laptop Setup and First Login",
+    "category": "Onboarding",
+    "source": "BuzzTech New Hire Guide (synthetic)",
+    "content": "The IT Service Desk pre-installs your laptop with the standard BuzzTech image, which includes the VPN client, the collaboration suite, and disk encryption. On first login you must change your temporary password and enroll in multi-factor authentication. You should complete both steps before leaving the IT Service Desk so that support staff can help if anything fails.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "onb-006",
+    "title": "Adding Dependants to Your Health Insurance",
+    "category": "Onboarding",
+    "source": "BuzzTech New Hire Guide (synthetic)",
+    "content": "You can add your spouse and up to three children to the group health insurance during your enrollment window. You will need to upload a marriage certificate or birth certificate for each dependant. Dependants added after the 30-day window require a qualifying life event and must be submitted to People Operations within 30 days of that event.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "onb-008",
+    "title": "Probation Period",
+    "category": "Onboarding",
+    "source": "BuzzTech New Hire Guide (synthetic)",
+    "content": "All new employees serve a probation period of three months. Your manager holds check-ins at 30, 60, and 80 days and records a written confirmation decision before the period ends. Probation can be extended once, by up to three months, if more time is needed to assess performance. During probation, either party may end employment with 15 days' written notice.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "onb-010",
+    "title": "Mandatory Training for New Hires",
+    "category": "Onboarding",
+    "source": "BuzzTech New Hire Guide (synthetic)",
+    "content": "Within your first two weeks you must complete four mandatory online modules: Information Security Basics, Code of Conduct, Anti-Harassment and Respect at Work, and Data Privacy. Each module takes about 30 minutes and ends with a short quiz that requires 80 percent to pass. Completion is tracked in the learning portal, and your manager is notified if modules are overdue.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "onb-012",
+    "title": "Who to Contact During Onboarding",
+    "category": "Onboarding",
+    "source": "BuzzTech New Hire Guide (synthetic)",
+    "content": "For questions about contracts, benefits, or documents, contact People Operations. For laptop, accounts, and access problems, contact the IT Service Desk. For questions about your role and first-week plan, ask your manager or your buddy. If you cannot find an answer in this assistant, you can ask it to raise a support ticket on your behalf.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "pay-002",
+    "title": "Accessing Your Payslip",
+    "category": "Payroll & Compensation",
+    "source": "BuzzTech Payroll Guide (synthetic)",
+    "content": "Your payslip is published in the Employee Self-Service portal on the day salary is paid. You can view and download payslips for the past 36 months, and annual tax summaries for the past five years. Payslips are not sent by email, to protect your personal information.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "pay-004",
+    "title": "Annual Tax Declaration",
+    "category": "Payroll & Compensation",
+    "source": "BuzzTech Payroll Guide (synthetic)",
+    "content": "Every employee submits a tax declaration once a year in January through the Employee Self-Service portal, listing planned investments and eligible deductions. Payroll uses the declaration to calculate monthly tax withholding for the rest of the financial year. A final proof submission window opens in February, when you upload supporting documents; unverified declarations are removed and any extra tax is deducted from the March salary.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "pay-006",
+    "title": "Changing Your Bank Account",
+    "category": "Payroll & Compensation",
+    "source": "BuzzTech Payroll Guide (synthetic)",
+    "content": "To change your bank account, submit the new details and a cancelled cheque or bank statement in the Employee Self-Service portal. The change takes five business days to verify. If you submit it after the 20th of the month, your next salary may still go to the old account, so submit changes early.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "pay-008",
+    "title": "Annual Salary Revision",
+    "category": "Payroll & Compensation",
+    "source": "BuzzTech Payroll Guide (synthetic)",
+    "content": "Salary revisions take effect on April 1 and are based on the annual performance review rating and market benchmarks. Employees receive their revision letters in late March. Employees who joined after October 1 become eligible for revision in the following cycle.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "pay-010",
+    "title": "Exercising Vested Stock Options",
+    "category": "Payroll & Compensation",
+    "source": "BuzzTech Equity Plan Summary (synthetic)",
+    "content": "You can exercise vested options during the two exercise windows each year, in May and in November. You pay the exercise price per share plus applicable taxes, and shares are credited to your equity account within ten business days. Options that have not vested are cancelled when your employment ends.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "pay-012",
+    "title": "Salary Advance",
+    "category": "Payroll & Compensation",
+    "source": "BuzzTech Payroll Guide (synthetic)",
+    "content": "Confirmed employees can request one emergency salary advance per year of up to one month's base pay. Requests are made to People Operations with your manager's approval and are recovered in up to six equal monthly deductions. Advances are not available during probation or the notice period.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "pay-014",
+    "title": "Final Settlement When You Leave",
+    "category": "Payroll & Compensation",
+    "source": "BuzzTech Payroll Guide (synthetic)",
+    "content": "Your final settlement includes salary up to your last working day, encashment of unused earned leave, and any pending expense claims, less recoveries such as unreturned equipment or unserved notice. It is paid within 45 days of your last working day, after the exit clearance process is complete. You will receive a settlement statement and your experience letter on the same day.",
+    "last_updated": "2026-01-15",
+    "synthetic": true
+  },
+  {
+    "document_id": "qa-0a6d9cbd80a80a4b",
+    "title": "Outlook search function not returning recent emails",
+    "category": "IT Support",
+    "source": "KameronB/synthetic-it-callcenter-tickets",
+    "content": "Question: Outlook search function not returning recent emails\nAnswer: Rebuilt the Outlook search index for the user. Verified that the indexing was complete. Tested the search functionality and confirmed that it now returns all recent emails as expected. User confirmed the issue is resolved.",
+    "last_updated": null,
+    "synthetic": false
+  },
+  {
+    "document_id": "qa-1f4d99c055f35fc4",
+    "title": "What triggers updates to the Code of Conduct?",
+    "category": "HR Policy",
+    "source": "strova-ai/hr-policies-qa-dataset",
+    "content": "Question: What triggers updates to the Code of Conduct?\nAnswer: Updates to the Code of Conduct may be triggered by changes in law, business practices, or company values.",
+    "last_updated": null,
+    "synthetic": false
+  },
+  {
+    "document_id": "qa-22b52f09f46af91e",
+    "title": "Remote Printer Setup Assistance",
+    "category": "IT Support",
+    "source": "KameronB/synthetic-it-callcenter-tickets",
+    "content": "Question: Remote Printer Setup Assistance\nAnswer: The ticket was resolved by scheduling a remote assistance session over a phone call to help the customer set up their Canon i-Sensys MF734Cdw. The customer was guided through the installation process, including software installation and connection to their network.",
+    "last_updated": null,
+    "synthetic": false
+  },
+  {
+    "document_id": "qa-2aea2ad1c7fdcd3a",
+    "title": "Request for VPN setup for remote work.",
+    "category": "IT Support",
+    "source": "KameronB/synthetic-it-callcenter-tickets",
+    "content": "Question: Request for VPN setup for remote work.\nAnswer: The request was for VPN setup to facilitate remote work. Necessary details were collected from the user, including their email and device information. VPN setup instructions and credentials were sent to the user. A follow-up was scheduled to ensure that the user completed the setup and understood how to operate the VPN. The user confirmed successful connection and operational functionality during the follow-up.",
+    "last_updated": null,
+    "synthetic": false
+  },
+  {
+    "document_id": "qa-3226a0e2916d693b",
+    "title": "Brother HL-L2395DW Printer offline issue",
+    "category": "IT Support",
+    "source": "KameronB/synthetic-it-callcenter-tickets",
+    "content": "Question: Brother HL-L2395DW Printer offline issue\nAnswer: Advised customer to update the printer's firmware and check for interference from other wireless devices. Also suggested setting a static IP for the printer to ensure a stable connection and avoid IP conflicts, which can cause the device to appear offline.",
+    "last_updated": null,
+    "synthetic": false
+  },
+  {
+    "document_id": "qa-343368a648e86323",
+    "title": "User experiencing missing MFA prompt",
+    "category": "IT Support",
+    "source": "KameronB/synthetic-it-callcenter-tickets",
+    "content": "Question: User experiencing missing MFA prompt\nAnswer: The user reported that their MFA prompt was not appearing in Okta. Guided the user through the process of clearing their browser cache to eliminate any potential issues related to stored data. Confirmed that the user's MFA settings in their profile remained unchanged and were correctly configured. Despite these steps, the user continued to experience the same issue with the missing MFA prompt. Further assistance is required to resolve this matter, and the ticket will remain open for additional support. The customer has been informed that we are actively working on a solution and will follow up shortly.",
+    "last_updated": null,
+    "synthetic": false
+  },
+  {
+    "document_id": "qa-429cbd6165e132ad",
+    "title": "Customer MFA prompt failure in Okta",
+    "category": "IT Support",
+    "source": "KameronB/synthetic-it-callcenter-tickets",
+    "content": "Question: Customer MFA prompt failure in Okta\nAnswer: Investigated the customer's issue with the multi-factor authentication prompt not appearing in Okta. Performed initial troubleshooting steps, including clearing the browser cache and testing multiple browsers, but the issue remained unresolved. Escalated the problem to the appropriate team to ensure dedicated resources are focused on restoring MFA functionality. Communicated with the customer regarding the ongoing efforts and assured them that updates will be provided as progress is made. The ticket will remain open until the MFA prompt issue is fully resolved.",
+    "last_updated": null,
+    "synthetic": false
+  },
+  {
+    "document_id": "qa-4623c3aac3a9cd7b",
+    "title": "Can the policy be changed or withdrawn?",
+    "category": "HR Policy",
+    "source": "strova-ai/hr-policies-qa-dataset",
+    "content": "Question: Can the policy be changed or withdrawn?\nAnswer: Yes, management reserves the right to amend or withdraw this policy at any time, depending on business needs.",
+    "last_updated": null,
+    "synthetic": false
+  },
+  {
+    "document_id": "qa-59e9e772fff6517c",
+    "title": "Emails missing from Outlook inbox after migration.",
+    "category": "IT Support",
+    "source": "KameronB/synthetic-it-callcenter-tickets",
+    "content": "Question: Emails missing from Outlook inbox after migration.\nAnswer: Issue resolved by recovering emails from backup and restoring them to the user's account. Verified that the emails were successfully restored and accessible. Provided the user with additional instructions on managing emails post-migration to prevent future issues.",
+    "last_updated": null,
+    "synthetic": false
+  },
+  {
+    "document_id": "qa-613378621ccc0cbe",
+    "title": "Help needed with connecting Xerox Phaser 6510/DNI to WiFi for printing.",
+    "category": "IT Support",
+    "source": "KameronB/synthetic-it-callcenter-tickets",
+    "content": "Question: Help needed with connecting Xerox Phaser 6510/DNI to WiFi for printing.\nAnswer: Assisted the customer with setting up WiFi printing on their new Xerox Phaser 6510/DNI. Provided step-by-step instructions to connect the printer to their wireless network and verified functionality by printing a test page. The customer confirmed that the printer is working wirelessly.",
+    "last_updated": null,
+    "synthetic": false
+  },
+  {
+    "document_id": "qa-6a056303cc8c796e",
+    "title": "Request for installation of TeamSync software",
+    "category": "IT Support",
+    "source": "KameronB/synthetic-it-callcenter-tickets",
+    "content": "Question: Request for installation of TeamSync software\nAnswer: The user requested the installation of TeamSync software. After initial system assessment, it was confirmed that the system is compatible with TeamSync. The task has been escalated to the Systems Installation Unit for completion.",
+    "last_updated": null,
+    "synthetic": false
+  },
+  {
+    "document_id": "qa-6af40e755d5338b6",
+    "title": "Access request for Q:\\IT\\Software Licenses shared network drive",
+    "category": "IT Support",
+    "source": "KameronB/synthetic-it-callcenter-tickets",
+    "content": "Question: Access request for Q:\\IT\\Software Licenses shared network drive\nAnswer: User requested access to the Q:\\IT\\Software Licenses shared network drive for a scheduled audit. Verified the user's role and validated the necessity of access with the IT leaders. Updated folder permissions to include the user, ensuring read-only access to maintain security. Instructed the user to log off and log back in to see the changes. User confirmed successful access to the needed drive.",
+    "last_updated": null,
+    "synthetic": false
+  },
+  {
+    "document_id": "qa-74308473374105c1",
+    "title": "Who is responsible for drafting policies at BuzzTech Solutions?",
+    "category": "HR Policy",
+    "source": "strova-ai/hr-policies-qa-dataset",
+    "content": "Question: Who is responsible for drafting policies at BuzzTech Solutions?\nAnswer: At BuzzTech Solutions, the Senior HR is responsible for drafting policies.",
+    "last_updated": null,
+    "synthetic": false
+  },
+  {
+    "document_id": "qa-837254f99105eead",
+    "title": "Outlook repeatedly prompts for email password",
+    "category": "IT Support",
+    "source": "KameronB/synthetic-it-callcenter-tickets",
+    "content": "Question: Outlook repeatedly prompts for email password\nAnswer: User reported that Outlook keeps asking for the email password. Initial troubleshooting involved checking for stored credentials in Credential Manager. Deleted the saved passwords. User was then prompted to enter the password again in Outlook, and 'Remember my credentials' box was checked. Following these steps, the issue was resolved and the password prompt problem went away.",
+    "last_updated": null,
+    "synthetic": false
+  },
+  {
+    "document_id": "qa-882f939eaba4e9ac",
+    "title": "WiFi Printing Setup Request",
+    "category": "IT Support",
+    "source": "KameronB/synthetic-it-callcenter-tickets",
+    "content": "Question: WiFi Printing Setup Request\nAnswer: Assisted the customer with setting up WiFi printing on their new Xerox Phaser 6510/DNI. Provided step-by-step instructions to connect the printer to their wireless network and verified functionality by printing a test page. The customer confirmed that the printer is working wirelessly.",
+    "last_updated": null,
+    "synthetic": false
+  },
+  {
+    "document_id": "qa-8bc38da5993ac175",
+    "title": "Outlook repeatedly asking for email account password",
+    "category": "IT Support",
+    "source": "KameronB/synthetic-it-callcenter-tickets",
+    "content": "Question: Outlook repeatedly asking for email account password\nAnswer: The issue was resolved by clearing the saved credentials from Credential Manager, re-entering the password, and enabling 'Remember my credentials'. This ensured that Outlook no longer prompted repeatedly for the password.",
+    "last_updated": null,
+    "synthetic": false
+  },
+  {
+    "document_id": "qa-90e32a5697d30020",
+    "title": "Brother HL-L2395DW Printer sporadically going offline",
+    "category": "IT Support",
+    "source": "KameronB/synthetic-it-callcenter-tickets",
+    "content": "Question: Brother HL-L2395DW Printer sporadically going offline\nAnswer: Advised customer to update the printer's firmware and check for interference from other wireless devices. Also suggested setting a static IP for the printer to ensure a stable connection and avoid IP conflicts, which can cause the device to appear offline.",
+    "last_updated": null,
+    "synthetic": false
+  },
+  {
+    "document_id": "qa-9b259255ce833b22",
+    "title": "Request for ZoomInfo software installation",
+    "category": "IT Support",
+    "source": "KameronB/synthetic-it-callcenter-tickets",
+    "content": "Question: Request for ZoomInfo software installation\nAnswer: Issue resolved. Installed ZoomInfo version 5.0 on the user's machine. Verified installation by launching the application and ensuring it runs without errors. User confirmed that the software is working as expected.",
+    "last_updated": null,
+    "synthetic": false
+  },
+  {
+    "document_id": "qa-acbefffc42799018",
+    "title": "Is there a specific department to contact for policy inquiries?",
+    "category": "HR Policy",
+    "source": "strova-ai/hr-policies-qa-dataset",
+    "content": "Question: Is there a specific department to contact for policy inquiries?\nAnswer: Yes, for policy inquiries, you should contact the HR department at hr@buzztech.example.",
+    "last_updated": null,
+    "synthetic": false
+  },
+  {
+    "document_id": "qa-aeeab7228bcd5379",
+    "title": "User unable to complete MFA setup",
+    "category": "IT Support",
+    "source": "KameronB/synthetic-it-callcenter-tickets",
+    "content": "Question: User unable to complete MFA setup\nAnswer: Cleared browser cache and advised the user to attempt the MFA setup again. Suggested trying an alternative browser to see if that resolves the issue. User successfully completed the multi-factor authentication registration process after following these steps. Confirmed that the user can now access their Azure Active Directory without further issues. The user expressed satisfaction with the resolution and thanked for the assistance. Ticket closed as the issue has been resolved.",
+    "last_updated": null,
+    "synthetic": false
+  },
+  {
+    "document_id": "qa-bdd91fa43cef62f3",
+    "title": "Unable to reset password via self-service portal",
+    "category": "IT Support",
+    "source": "KameronB/synthetic-it-callcenter-tickets",
+    "content": "Question: Unable to reset password via self-service portal\nAnswer: Verified account status in Active Directory and confirmed it was active. Checked self-service portal settings and found that there were no configuration issues. Performed a manual password reset for the user and verified successful login. Provided instructions to the user on how to properly use the self-service portal to reset their password in the future.",
+    "last_updated": null,
+    "synthetic": false
+  },
+  {
+    "document_id": "qa-c03a7bfcd981f19e",
+    "title": "Error message 'Cannot open Outlook window' when launching Outlook",
+    "category": "IT Support",
+    "source": "KameronB/synthetic-it-callcenter-tickets",
+    "content": "Question: Error message 'Cannot open Outlook window' when launching Outlook\nAnswer: Issue resolved by launching Outlook in safe mode and resetting the navigation pane. Steps taken: 1. Launched Outlook in safe mode using the command 'Outlook.exe /safe'. 2. Reset the navigation pane using the command 'Outlook.exe /resetnavpane'. After performing these steps, Outlook opened normally.",
+    "last_updated": null,
+    "synthetic": false
+  },
+  {
+    "document_id": "qa-cd7a45d6f32ebb88",
+    "title": "Request for VPN setup for remote work",
+    "category": "IT Support",
+    "source": "KameronB/synthetic-it-callcenter-tickets",
+    "content": "Question: Request for VPN setup for remote work\nAnswer: Collected necessary details from the user for VPN access. Provided setup instructions along with credentials. Scheduled a follow-up to ensure the setup was completed successfully and the user understands how to use the VPN for remote work. Confirmed with the user during the follow-up that the VPN is functioning correctly and they have no issues.",
+    "last_updated": null,
+    "synthetic": false
+  },
+  {
+    "document_id": "qa-d28d7bae86ee7a43",
+    "title": "Where can I direct my questions about the company's policy?",
+    "category": "HR Policy",
+    "source": "strova-ai/hr-policies-qa-dataset",
+    "content": "Question: Where can I direct my questions about the company's policy?\nAnswer: You can direct your questions about the company's policy to hr@buzztech.example.",
+    "last_updated": null,
+    "synthetic": false
+  },
+  {
+    "document_id": "qa-d53cfb58016a6ef7",
+    "title": "Request to install SalesSignal software",
+    "category": "IT Support",
+    "source": "KameronB/synthetic-it-callcenter-tickets",
+    "content": "Question: Request to install SalesSignal software\nAnswer: User requested the installation of SalesSignal but did not specify the version. Verified system compatibility for SalesSignal installation, which was confirmed. Forwarded the request to the installation team for completion.",
+    "last_updated": null,
+    "synthetic": false
+  },
+  {
+    "document_id": "qa-d7fcec65c72450a2",
+    "title": "Who drafted the policy at BuzzTech Solutions?",
+    "category": "HR Policy",
+    "source": "strova-ai/hr-policies-qa-dataset",
+    "content": "Question: Who drafted the policy at BuzzTech Solutions?\nAnswer: The policy at BuzzTech Solutions was drafted by the Senior HR.",
+    "last_updated": null,
+    "synthetic": false
+  },
+  {
+    "document_id": "qa-d9cabfbe189520ed",
+    "title": "Who should I contact if I have questions about the policy?",
+    "category": "HR Policy",
+    "source": "strova-ai/hr-policies-qa-dataset",
+    "content": "Question: Who should I contact if I have questions about the policy?\nAnswer: For any queries regarding the policy, you should contact hr@buzztech.example.",
+    "last_updated": null,
+    "synthetic": false
+  },
+  {
+    "document_id": "qa-dfe2b22816b50efc",
+    "title": "Request for additional storage on the network drive for the marketing department",
+    "category": "IT Support",
+    "source": "KameronB/synthetic-it-callcenter-tickets",
+    "content": "Question: Request for additional storage on the network drive for the marketing department\nAnswer: Reviewed current storage usage and future project requirements with the marketing manager. Identified that the current storage was insufficient for the new video projects. Increased the storage capacity on the network drive as per the discussed requirements. Verified the increase and confirmed accessibility with the marketing department. Notified the marketing manager of the successful update.",
+    "last_updated": null,
+    "synthetic": false
+  },
+  {
+    "document_id": "qa-e1d201485b48f89b",
+    "title": "Intermittent WiFi connectivity issues with Brother HL-L2395DW",
+    "category": "IT Support",
+    "source": "KameronB/synthetic-it-callcenter-tickets",
+    "content": "Question: Intermittent WiFi connectivity issues with Brother HL-L2395DW\nAnswer: Advised customer to update the printer's firmware and check for interference from other wireless devices. Also suggested setting a static IP for the printer to ensure a stable connection and avoid IP conflicts, which can cause the device to appear offline.",
+    "last_updated": null,
+    "synthetic": false
+  },
+  {
+    "document_id": "qa-e744462fe16e8f90",
+    "title": "Will I be informed if there are major changes to the company policy?",
+    "category": "HR Policy",
+    "source": "strova-ai/hr-policies-qa-dataset",
+    "content": "Question: Will I be informed if there are major changes to the company policy?\nAnswer: Yes, employees will be notified of any significant changes to the company policy.",
+    "last_updated": null,
+    "synthetic": false
+  },
+  {
+    "document_id": "qa-e86e562cd03c0bdb",
+    "title": "Request for increased storage on network drive for the marketing department.",
+    "category": "IT Support",
+    "source": "KameronB/synthetic-it-callcenter-tickets",
+    "content": "Question: Request for increased storage on network drive for the marketing department.\nAnswer: The marketing department requested more storage space on the network drive for new video projects. After discussing the current usage and future requirements with the marketing manager, I assessed the existing storage capacity. Based on this assessment, I increased the network drive storage to accommodate their needs. Finally, I informed the marketing department about the successful increase in storage space.",
+    "last_updated": null,
+    "synthetic": false
+  },
+  {
+    "document_id": "qa-ecf79fb82d000391",
+    "title": "User unable to access company VPN from home network",
+    "category": "IT Support",
+    "source": "KameronB/synthetic-it-callcenter-tickets",
+    "content": "Question: User unable to access company VPN from home network\nAnswer: Initial troubleshooting involved verifying that the user's internet connection was stable and operational. Ensured the VPN client software was up to date and correctly configured. Verified the user had the correct VPN credentials and permissions. Disabled local firewall temporarily to check for conflicts. Cleared DNS cache and reset network settings. Issue was resolved after reconfiguring VPN client settings and ensuring the correct VPN server address was being used.",
+    "last_updated": null,
+    "synthetic": false
+  }
+]
