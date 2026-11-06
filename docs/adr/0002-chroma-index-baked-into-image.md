@@ -24,3 +24,11 @@ A CI job builds the Chroma index from the knowledge-base files and copies it int
 - The image is larger (index on the order of 100-200 MB for about 21k vectors; measure it in T19), which lengthens cold starts after scale-to-zero.
 - Building the index needs the OpenAI key in CI, but only on the main-branch build path, never on PRs from forks.
 - The app cannot add knowledge at runtime. If that becomes a requirement, revisit with a Chroma server or pgvector.
+
+## Security note: known chromadb advisories (2026-11-06)
+
+`pip-audit` reports four advisories against chromadb 1.5.9 (PYSEC-2026-311, -3813, -3814, -3815), with no fixed version. All concern Chroma's **HTTP server**: remote code execution through `trust_remote_code` on its REST collection endpoints, and missing tenant checks in its RBAC authorization provider. Tier0 uses only the embedded in-process `PersistentClient`; it starts no Chroma server, opens no port and uses no auth provider, so these paths are not reachable.
+
+The CI dependency audit therefore ignores exactly these four IDs (see `.github/workflows/ci.yml`). The audit still fails on any other advisory, including any new chromadb one. `backend/tests/unit/test_chroma_server_unused.py` fails if application code or a container file starts using the server or `trust_remote_code`, which would invalidate this exception.
+
+Revisit when a fixed chromadb release ships (drop the ignores and upgrade), or if the design ever needs a Chroma server (then fix first, or choose pgvector).
