@@ -355,3 +355,36 @@ def test_the_reported_workflow_always_matches_what_the_agent_is_waiting_for(
 ) -> None:
     turn = setup(h)
     assert turn.awaiting is awaiting and turn.workflow is workflow
+
+
+# --- concurrency ----------------------------------------------------------------------
+
+
+def test_two_messages_on_one_conversation_never_run_at_the_same_time(h: Harness) -> None:
+    import threading
+    import time
+
+    running = 0
+    peak = 0
+    guard = threading.Lock()
+    original = h.classifier.classify
+
+    def slow(message: str, history: list) -> IntentResult:  # type: ignore[type-arg]
+        nonlocal running, peak
+        with guard:
+            running += 1
+            peak = max(peak, running)
+        time.sleep(0.05)
+        try:
+            return original(message, history)
+        finally:
+            with guard:
+                running -= 1
+
+    h.classifier.classify = slow  # type: ignore[method-assign]
+    workers = [threading.Thread(target=h.say, args=(ANSWERABLE, "same-thread")) for _ in range(6)]
+    for w in workers:
+        w.start()
+    for w in workers:
+        w.join()
+    assert peak == 1  # one at a time on a conversation, whatever the number of callers

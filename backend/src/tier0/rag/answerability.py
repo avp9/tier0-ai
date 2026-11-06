@@ -62,7 +62,12 @@ class AnswerabilityDecision(BaseModel):
 
 
 def escape(text: str) -> str:
-    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    return (
+        text.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")  # a title must not be able to end its own attribute
+    )
 
 
 def format_passages(hits: list[Hit]) -> str:

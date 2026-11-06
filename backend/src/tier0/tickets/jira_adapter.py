@@ -75,7 +75,13 @@ def classify_error(error: Exception, *, write: bool) -> TicketError:
         if status >= 500:
             message = f"ticketing server error (HTTP {status})"
             return TicketOutcomeUnknown(message) if write else TicketServiceUnavailable(message)
-        return TicketServiceUnavailable(f"unexpected ticketing response (HTTP {status})")
+        message = f"unexpected ticketing response (HTTP {status})"
+        # Status 0 means no HTTP answer was read, so a write may or may not have arrived.
+        return (
+            TicketOutcomeUnknown(message)
+            if write and status == 0
+            else TicketServiceUnavailable(message)
+        )
 
     if isinstance(error, requests.exceptions.ConnectTimeout):
         return TicketServiceUnavailable("could not connect to the ticketing service")
@@ -87,6 +93,8 @@ def classify_error(error: Exception, *, write: bool) -> TicketError:
         if write and dropped_midway:
             return TicketOutcomeUnknown("connection to the ticketing service dropped")
         return TicketServiceUnavailable("could not reach the ticketing service")
+    if write:  # some other failure after the request may have been sent
+        return TicketOutcomeUnknown("ticketing request failed after it may have been sent")
     return TicketServiceUnavailable("ticketing request failed")
 
 
@@ -128,7 +136,12 @@ class JiraAdapter:
             issue = self._jira.create_issue(fields=self.build_fields(draft))
         except (JIRAError, requests.exceptions.RequestException) as error:
             raise classify_error(error, write=True) from error
-        key = str(issue.key)
+        try:
+            key = str(issue.key)
+        except AttributeError as error:  # created, but the answer is unusable
+            raise TicketOutcomeUnknown("ticketing response did not name the new ticket") from error
+        if not key or key == "None":
+            raise TicketOutcomeUnknown("ticketing response did not name the new ticket")
         return CreatedTicket(key=key, url=self.url_for(key))
 
     def find_tickets(self, requester_email: str) -> list[TicketSummary]:
@@ -145,7 +158,11 @@ class JiraAdapter:
             raw_comments = self._jira.comments(key)
         except (JIRAError, requests.exceptions.RequestException) as error:
             raise classify_error(error, write=False) from error
-        return TicketDetails(summary=found[0], comments=self._comments(raw_comments))
+        try:
+            comments = self._comments(raw_comments)
+        except (AttributeError, KeyError, TypeError, ValueError) as error:
+            raise TicketServiceUnavailable("unexpected ticketing response") from error
+        return TicketDetails(summary=found[0], comments=comments)
 
     def find_by_submission_id(
         self, submission_id: str, requester_email: str
@@ -189,11 +206,20 @@ class JiraAdapter:
             issues = self._jira.search_issues(jql, maxResults=config.max_results, fields=fields)
         except (JIRAError, requests.exceptions.RequestException) as error:
             raise classify_error(error, write=False) from error
+        try:
+            return self._summaries(issues, email)
+        except (AttributeError, KeyError, TypeError, ValueError) as error:
+            raise TicketServiceUnavailable("unexpected ticketing response") from error
+
+    def _summaries(self, issues: Any, email: str) -> list[TicketSummary]:
+        config = self._config
         summaries: list[TicketSummary] = []
         for issue in issues:
-            raw_fields = issue.raw.get("fields", {})
+            raw_fields = issue.raw.get("fields") or {}
             owner = str(raw_fields.get(config.requester_field_id) or "")
             labels = raw_fields.get("labels") or []
+            if not isinstance(labels, list):
+                continue
             # Re-check ownership and environment here: the query is a filter, not a guarantee.
             if owner.casefold() != email.casefold() or config.env_label not in labels:
                 continue

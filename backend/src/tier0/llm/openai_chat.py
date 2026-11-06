@@ -33,6 +33,8 @@ class OpenAIChatModel:
                 )
         except OpenAIError as error:
             raise LLMError(f"OpenAI request failed: {type(error).__name__}") from error
+        if not response.choices:  # e.g. everything filtered out
+            raise LLMError("OpenAI returned no choices")
         content = response.choices[0].message.content
         if not content:
             raise LLMError("OpenAI returned an empty response")

@@ -41,6 +41,11 @@ class Settings(BaseSettings):
     login_max_failures_per_ip: int = Field(default=20, ge=1)
     login_window_minutes: int = Field(default=15, ge=1)
     chat_messages_per_minute: int = Field(default=20, ge=1)
+    # How many reverse proxies sit in front of the app (0 locally; 1 behind Container Apps ingress).
+    # The client address is then the Nth entry from the right of X-Forwarded-For, which a caller
+    # cannot forge because each proxy appends to the header.
+    trusted_proxy_hops: int = Field(default=0, ge=0, le=3)
+    max_request_bytes: int = Field(default=65_536, ge=1_024, le=1_048_576)
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
     log_format: Literal["auto", "json", "text"] = "auto"  # auto: text locally, JSON elsewhere
 

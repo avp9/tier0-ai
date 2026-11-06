@@ -61,6 +61,8 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
           resources: { cpu: json('0.5'), memory: '1Gi' }
           env: [
             { name: 'APP_ENV', value: appEnv }
+            // One reverse proxy (the Container Apps ingress) sits in front of the app.
+            { name: 'TRUSTED_PROXY_HOPS', value: '1' }
             { name: 'DATABASE_URL', secretRef: 'database-url' }
             { name: 'SESSION_SECRET', secretRef: 'session-secret' }
             { name: 'OPENAI_API_KEY', secretRef: 'openai-api-key' }
