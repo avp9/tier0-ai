@@ -4,6 +4,8 @@ version = "0.1.0"
 description = "Tier0 AI: intelligent IT & HR operations agent"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "chromadb>=1.5.9",
+    "openai>=3.46.0",
     "pydantic>=2.14.3",
 ]
 
