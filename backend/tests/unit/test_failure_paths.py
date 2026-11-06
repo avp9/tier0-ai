@@ -127,6 +127,15 @@ def test_the_model_cannot_cite_documents_it_was_not_given() -> None:
     assert [s.document_id for s in result.sources] == ["doc-1"]
 
 
+def test_a_cited_source_carries_its_origin_and_match_score() -> None:
+    def respond(system: str, user: str, json_mode: bool) -> str:
+        return verdict(supporting_ids=["doc-1"]) if json_mode else "Answer."
+
+    (source,) = service(FakeChatModel(respond)).answer("q").sources
+    assert source.document_id == "doc-1" and source.source
+    assert source.score is not None and 0 <= source.score <= 1
+
+
 def test_a_model_claiming_sufficiency_with_no_citation_still_cites_retrieved_text() -> None:
     def respond(system: str, user: str, json_mode: bool) -> str:
         return verdict(supporting_ids=[]) if json_mode else "Answer."
