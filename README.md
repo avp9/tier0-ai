@@ -19,3 +19,14 @@ uv run python scripts/build_index.py --print-hash
 ```
 
 The index is written to `.data/chroma`. A second run with unchanged data and the same embedding model is skipped.
+
+## Inspecting and evaluating retrieval
+
+```bash
+# Show the top matches for a question
+uv run python scripts/inspect_retrieval.py "how do I reset my password" -k 5
+# Score the 44 evaluation cases (Recall@k, Hit@k, MRR) and the Knowledge Gap separation
+uv run python scripts/inspect_retrieval.py --evaluate
+```
+
+Both use the OpenAI embedder by default and need an index built with the same model. Add `--embedder fake` to use an index built with `build_index.py --embedder fake`; fake results only exercise the tooling and say nothing about real quality.
