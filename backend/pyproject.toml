@@ -8,6 +8,7 @@ dependencies = [
     "jira>=3.10.5",
     "openai>=3.46.0",
     "pydantic>=2.14.3",
+    "typesafe-sdk>=0.7.5",
 ]
 
 [dependency-groups]

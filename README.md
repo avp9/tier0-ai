@@ -50,3 +50,12 @@ APP_ENV=staging uv run python scripts/jira_smoke.py alice@buzztech.example
 ```
 
 Every ticket carries a `tier0-env:<APP_ENV>` label and lookups only return tickets with the signed-in requester's email and the current environment's label, so staging and production never see each other's tickets.
+
+## Classifying what an employee wants
+
+```bash
+TYPESAFE_API_KEY=... OPENAI_API_KEY=... \
+  uv run python scripts/classify_intent.py "any news on my ticket?"
+```
+
+Each message is classified into an intent (knowledge question, create ticket, ticket status, small talk, out of scope, ambiguous), a domain (IT, HR, other) and whether it continues the earlier topic. JEV (`typesafe_sdk`, 10 s timeout, 2 retries) is tried first; if it fails or returns something unusable, OpenAI is used. The result says which provider answered. If both fail the caller gets `IntentUnavailable` and should ask the employee to retry.
