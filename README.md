@@ -162,7 +162,7 @@ AT-04 and AT-09 are reinterpreted per ADR 0001: the requester's email always com
 
 ## Production image
 
-`docker build --target prod --build-context index=<dir> -t tier0 .` builds the runtime image (Python 3.12 slim, non-root user `tier0`, UI and prebuilt knowledge-base index baked in). The index is built outside the image (`backend/scripts/build_index.py`, which needs `OPENAI_API_KEY`) so that no key ever enters an image layer; building without an index fails on purpose. All settings come from environment variables at run time (see `.env.example`); outside `local`/`e2e` the server refuses to start if any are missing.
+`docker build --target prod --build-context index=<dir> --build-arg INDEX_HASH=<hash> -t tier0 .` builds the runtime image (Python 3.12 slim, non-root user `tier0`, UI and prebuilt knowledge-base index baked in). The index is built outside the image (`backend/scripts/build_index.py`, which needs `OPENAI_API_KEY`) so that no key ever enters an image layer; building without an index or its `INDEX_HASH` fails on purpose, even when layers are cached (the hash is also stored as the image label `tier0.index-hash`). All settings come from environment variables at run time (see `.env.example`); outside `local`/`e2e` the server refuses to start if any are missing.
 
 Measured on an arm64 laptop with the full 20,935-record knowledge base (indexed with the fake embedder, so the index is a stand-in for the real one, which will be larger):
 

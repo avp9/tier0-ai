@@ -142,9 +142,16 @@ jobs:
           uv sync --frozen
           uv run python scripts/build_index.py --embedder fake --kb-dir ../data/fixtures --index-dir "$RUNNER_TEMP/index"
       - name: Build the production image
-        run: docker build --target prod --build-context index="$RUNNER_TEMP/index" -t tier0:ci .
+        run: docker build --target prod --build-context index="$RUNNER_TEMP/index" --build-arg INDEX_HASH=ci-fixture -t tier0:ci .
+      # Run after a successful build on purpose: cached layers must not let this one through.
       - name: Refuses to build without an index
-        run: "! docker build --target prod -t tier0:noindex . 2>/dev/null"
+        run: |
+          if docker build --target prod -t tier0:noindex . ; then
+            echo "a build without an index must fail"; exit 1
+          fi
+          if docker build --target prod --build-arg INDEX_HASH=x -t tier0:noindex . ; then
+            echo "a build without an index context must fail"; exit 1
+          fi
       - name: Runs as a non-root user
         run: test "$(docker run --rm tier0:ci id -u)" != 0
       - name: Exits instead of serving when its dependencies are unreachable

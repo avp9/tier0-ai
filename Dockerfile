@@ -6,7 +6,9 @@
 # The index is built outside the image (it needs OPENAI_API_KEY, which must never enter an image
 # layer) and supplied as a named build context:
 #   uv run python backend/scripts/build_index.py --index-dir /tmp/index
-#   docker build --build-context index=/tmp/index -t tier0 .
+#   docker build --build-context index=/tmp/index --build-arg INDEX_HASH=<content hash> -t tier0 .
+# INDEX_HASH (from build_index.py, printed when it finishes) is required: it is recorded as an
+# image label, and it makes a build without a fresh index fail even if layers are cached.
 
 FROM node:22-bookworm-slim AS web
 WORKDIR /web
@@ -49,6 +51,10 @@ HEALTHCHECK --interval=5s --timeout=3s --retries=20 \
 CMD ["uvicorn", "--factory", "tier0.api.app:create_app_from_env", "--host", "0.0.0.0", "--port", "8000"]
 
 FROM runtime AS prod
+ARG INDEX_HASH
+RUN test -n "$INDEX_HASH" \
+    || (echo "Set --build-arg INDEX_HASH=<hash of the supplied index>" >&2; exit 1)
+LABEL tier0.index-hash=$INDEX_HASH
 COPY --from=index --chown=tier0 / /app/data/chroma
 RUN test -f /app/data/chroma/chroma.sqlite3 \
     || (echo "No index supplied: build with --build-context index=<dir>" >&2; exit 1)
