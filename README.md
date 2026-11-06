@@ -8,7 +8,7 @@ An IT and HR help-desk agent for the fictional company BuzzTech Solutions. An em
 
 | | Status |
 |---|---|
-| Backend, agent, API, web app | Built and tested: 800 backend tests, 111 frontend tests, 28 browser tests (AT-01 to AT-18, accessibility), all run in CI on every pull request |
+| Backend, agent, API, web app | Built and tested: 798 backend tests, 111 frontend tests, 28 browser tests (AT-01 to AT-18, accessibility), all run in CI on every pull request |
 | Real OpenAI, JEV and Jira | **Never exercised with real credentials.** Everything that touches them is tested against fakes and recorded responses. Run `backend/scripts/jira_smoke.py` and the Evaluation workflow once keys exist |
 | Answer quality numbers | **None yet.** The evaluation harness exists and runs; no run with real models has been recorded (see [evaluation report](docs/evaluation-report.md)) |
 | Azure deployment | Infrastructure code, pipelines and docs are written and linted. **Nothing has been deployed**; the pipelines have never run ([Azure setup](docs/azure-setup.md)) |
