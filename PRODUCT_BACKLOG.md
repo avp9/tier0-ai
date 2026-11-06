@@ -55,8 +55,8 @@ Each item is one PR. Pick the highest-priority item whose dependencies are **Don
 | ID | Branch | Item | Acceptance criteria | Depends on | Status |
 |---|---|---|---|---|---|
 | T19 | `chore/dockerfile` | Multi-stage production image | Stages: frontend build, index build (needs the real index as input), then a slim Python 3.12 runtime running as a non-root user. Image size and cold start are measured and recorded. | T18 | Done |
-| T20 | `chore/azure-infra` | Bicep infrastructure and OIDC setup | `infra/main.bicep` defines the resource group contents (Container Apps environment, staging and prod apps, Postgres B1ms with two databases, Log Analytics). OIDC federated credentials with roles scoped to the resource group, plus a guided walkthrough for the owner's one-time manual steps. Cost estimate checked against the Azure pricing calculator. **Needs owner approval (infrastructure cost).** | T19 | In review |
-| T21 | `chore/deploy-pipeline` | Staging and gated production deploys | `deploy.yml`: cached index build, image pushed to GHCR (tagged by SHA), staging deploy, smoke tests, then a `production` environment approval before deploying the same SHA. Secrets go from GitHub Environments to Container Apps secrets. A rollback procedure is documented. | T20 | Todo |
+| T20 | `chore/azure-infra` | Bicep infrastructure and OIDC setup | `infra/main.bicep` defines the resource group contents (Container Apps environment, staging and prod apps, Postgres B1ms with two databases, Log Analytics). OIDC federated credentials with roles scoped to the resource group, plus a guided walkthrough for the owner's one-time manual steps. Cost estimate checked against the Azure pricing calculator. **Needs owner approval (infrastructure cost).** | T19 | Done |
+| T21 | `chore/deploy-pipeline` | Staging and gated production deploys | `deploy.yml`: cached index build, image pushed to GHCR (tagged by SHA), staging deploy, smoke tests, then a `production` environment approval before deploying the same SHA. Secrets go from GitHub Environments to Container Apps secrets. A rollback procedure is documented. | T20 | In review |
 
 ## M6 — Quality and submission
 

@@ -1,0 +1,168 @@
+name: Deploy
+
+# Runs only after CI succeeded for a push to main. Builds one image for the commit, deploys it to
+# staging, smoke-tests it, then waits for a human to approve the `production` environment before
+# deploying the very same image. Azure sign-in uses OIDC: no Azure password is stored in GitHub.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: Commit to deploy (must have passed CI)
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false # never abandon a half-finished deployment
+
+env:
+  IMAGE: ghcr.io/${{ github.repository }}
+  SHA: ${{ github.event.workflow_run.head_sha || inputs.sha }}
+
+jobs:
+  build:
+    name: Build image
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: staging # holds OPENAI_API_KEY, needed only to build the index
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.ref.outputs.image }}
+    steps:
+      - name: Check the commit is a full SHA that passed CI on main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "not a full commit SHA"; exit 1; }
+          conclusion=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow CI --branch main \
+            --commit "$SHA" --json conclusion --jq '.[0].conclusion')
+          [ "$conclusion" = "success" ] || { echo "CI has not succeeded for $SHA ($conclusion)"; exit 1; }
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SHA }}
+      - uses: astral-sh/setup-uv@v5
+      - name: Work out the knowledge-base hash (the index cache key)
+        id: kb
+        working-directory: backend
+        run: |
+          uv sync --frozen --no-dev
+          echo "hash=$(uv run python scripts/build_index.py --print-hash)" >> "$GITHUB_OUTPUT"
+      - name: Restore the index if this knowledge base was already indexed
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/index
+          key: index-${{ steps.kb.outputs.hash }}
+      - name: Build the index (only on a cache miss)
+        if: steps.cache.outputs.cache-hit != 'true'
+        working-directory: backend
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: uv run python scripts/build_index.py --index-dir "$RUNNER_TEMP/index"
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push the image, tagged by commit
+        id: ref
+        run: |
+          image="${IMAGE,,}:${SHA}"
+          docker buildx build --target prod --push -t "$image" \
+            --build-context index="$RUNNER_TEMP/index" \
+            --build-arg INDEX_HASH="${{ steps.kb.outputs.hash }}" \
+            --label org.opencontainers.image.revision="$SHA" \
+            --label org.opencontainers.image.source="${{ github.server_url }}/${{ github.repository }}" .
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+
+  staging:
+    name: Deploy to staging
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: staging
+      url: ${{ steps.deploy.outputs.url }}
+    permissions:
+      contents: read
+      id-token: write # lets this job ask Azure for a short-lived token (OIDC)
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SHA }}
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Deploy
+        id: deploy
+        run: |
+          app=ca-tier0-staging
+          az containerapp update -n $app -g "${{ vars.AZURE_RESOURCE_GROUP }}" --image "${{ needs.build.outputs.image }}" -o none
+          fqdn=$(az containerapp show -n $app -g "${{ vars.AZURE_RESOURCE_GROUP }}" --query properties.configuration.ingress.fqdn -o tsv)
+          echo "url=https://$fqdn" >> "$GITHUB_OUTPUT"
+      - name: Smoke tests
+        env:
+          SMOKE_EMAIL: ${{ secrets.SMOKE_EMAIL }}
+          SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}
+          SMOKE_EXPECT_SOURCES: "1"
+        run: python3 -I deploy/smoke_test.py "${{ steps.deploy.outputs.url }}"
+
+  production:
+    name: Deploy to production
+    needs: [build, staging]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # The environment has required reviewers: this job waits here until the owner approves.
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.url }}
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SHA }}
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Deploy the same image that passed in staging
+        id: deploy
+        run: |
+          app=ca-tier0-prod
+          rg="${{ vars.AZURE_RESOURCE_GROUP }}"
+          previous=$(az containerapp show -n $app -g "$rg" --query 'properties.template.containers[0].image' -o tsv)
+          echo "previous=$previous" >> "$GITHUB_OUTPUT"
+          az containerapp update -n $app -g "$rg" --image "${{ needs.build.outputs.image }}" -o none
+          fqdn=$(az containerapp show -n $app -g "$rg" --query properties.configuration.ingress.fqdn -o tsv)
+          echo "url=https://$fqdn" >> "$GITHUB_OUTPUT"
+      - name: Smoke tests
+        env:
+          SMOKE_EMAIL: ${{ secrets.SMOKE_EMAIL }}
+          SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}
+          SMOKE_EXPECT_SOURCES: "1"
+        run: python3 -I deploy/smoke_test.py "${{ steps.deploy.outputs.url }}"
+      - name: Roll back to the previous image if the smoke tests failed
+        if: failure() && steps.deploy.outputs.previous != ''
+        run: |
+          az containerapp update -n ca-tier0-prod -g "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --image "${{ steps.deploy.outputs.previous }}" -o none
+          echo "::error::Smoke tests failed; production was rolled back to ${{ steps.deploy.outputs.previous }}"

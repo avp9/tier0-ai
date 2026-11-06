@@ -46,9 +46,21 @@ Backups up to the provisioned size are included. The database is the only cost t
    The apps start on a placeholder image until the deploy pipeline (T21) pushes the first real one.
 5. **After the first image is pushed (T21):** make the GHCR package public (GitHub, Packages, Package settings) so Container Apps can pull it without a credential.
 
+## GitHub environment secrets
+
+The pipeline never asks Azure for a password; it only holds these application secrets, set by you in GitHub (Settings, Environments):
+
+| Environment | Secret | Used for |
+|---|---|---|
+| `staging` | `OPENAI_API_KEY` | Building the knowledge-base index (only when the knowledge base changed) |
+| `staging`, `production` | `SMOKE_EMAIL`, `SMOKE_PASSWORD` | A demo user the smoke tests sign in as (must exist in that environment's `DEMO_USERS`) |
+| `production` | the ten secrets in step 3 above | `infra.yml`, which copies them into Container Apps secrets |
+
+Run **Actions, Infrastructure** (manual, needs your production approval) after changing any of them. See `docs/rollback.md` for deploys and rollbacks.
+
 ## Re-deploying infrastructure
 
-`az deployment group create` replaces each app's configuration. Pass the images currently running (`stagingImage`, `productionImage`) or the apps go back to the placeholder. The T21 pipeline does this automatically.
+`az deployment group create` replaces each app's configuration. Pass the images currently running (`stagingImage`, `productionImage`) or the apps go back to the placeholder. The Infrastructure workflow does this automatically; for a manual deployment export `STAGING_IMAGE` and `PRODUCTION_IMAGE` first.
 
 ## Known limits
 
