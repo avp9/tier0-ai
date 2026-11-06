@@ -161,7 +161,9 @@ jobs:
             echo "expected a startup failure"; exit 1
           fi
       - name: Report image size
-        run: docker image ls tier0:ci --format '### Image size{{"\n"}}{{.Size}}' >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          size=$(docker image ls tier0:ci --format '{{.Size}}')
+          printf '### Image size\n%s\n' "$size" >> "$GITHUB_STEP_SUMMARY"
 
   dependency-audit:
     runs-on: ubuntu-latest
