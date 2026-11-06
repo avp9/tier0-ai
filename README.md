@@ -173,3 +173,7 @@ Measured on an arm64 laptop with the full 20,935-record knowledge base (indexed 
 | Memory after start | about 190 MB |
 
 The largest dependency is the `kubernetes` client (119 MB), pulled in by `chromadb` and unused here; trimming it is a possible later optimisation, left alone because removing files from a dependency risks breaking it.
+
+## Evaluation
+
+`backend/scripts/run_eval.py --providers real|fake` measures retrieval, answers, routing, ticket flows, latency and estimated cost, using the cases in `data/evaluation/`. The **Evaluation** workflow runs it nightly with the real providers (and skips with a warning until the keys are set). See `docs/evaluation-report.md` for what each number means and its limits. No real-provider results have been recorded yet.

@@ -1,0 +1,84 @@
+name: Evaluation
+
+# Measures answer quality, routing, ticket flows, latency and estimated cost with the real language
+# models. Tickets go to an in-memory fake ticket system, so a nightly run never files real tickets.
+# Not a merge gate: it spends money and depends on external services.
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+    inputs:
+      max_knowledge:
+        description: Limit knowledge conversations (blank = all 44), to cap cost
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eval
+  cancel-in-progress: false
+
+jobs:
+  evaluate:
+    if: github.event.repository.fork == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: staging # holds OPENAI_API_KEY and TYPESAFE_API_KEY
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
+      MAX_KNOWLEDGE: ${{ inputs.max_knowledge }}
+    steps:
+      - name: Check the keys are configured
+        id: keys
+        run: |
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "::warning::OPENAI_API_KEY is not set in the staging environment; evaluation skipped"
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.keys.outputs.ready == 'true'
+      - uses: astral-sh/setup-uv@v5
+        if: steps.keys.outputs.ready == 'true'
+      - name: Work out the knowledge-base hash (the index cache key)
+        if: steps.keys.outputs.ready == 'true'
+        id: kb
+        working-directory: backend
+        run: |
+          uv sync --frozen --no-dev
+          echo "hash=$(uv run python scripts/build_index.py --print-hash)" >> "$GITHUB_OUTPUT"
+      - name: Restore the index if this knowledge base was already indexed
+        if: steps.keys.outputs.ready == 'true'
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/index
+          key: index-${{ steps.kb.outputs.hash }}
+      - name: Build the index (only on a cache miss)
+        if: steps.keys.outputs.ready == 'true' && steps.cache.outputs.cache-hit != 'true'
+        working-directory: backend
+        run: uv run python scripts/build_index.py --index-dir "$RUNNER_TEMP/index"
+      - name: Run the evaluation
+        if: steps.keys.outputs.ready == 'true'
+        working-directory: backend
+        run: |
+          args=(--providers real --index-dir "$RUNNER_TEMP/index" --out "$RUNNER_TEMP/eval-out")
+          if [ -n "$MAX_KNOWLEDGE" ]; then args+=(--max-knowledge "$MAX_KNOWLEDGE"); fi
+          set +e
+          uv run python scripts/run_eval.py "${args[@]}"
+          status=$?
+          {
+            echo "## Evaluation $(date -u +%F)"
+            cat "$RUNNER_TEMP/eval-out/summary.md" 2>/dev/null
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit $status
+      - name: Keep the report
+        if: always() && steps.keys.outputs.ready == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: evaluation-${{ github.run_id }}
+          path: ${{ runner.temp }}/eval-out
+          retention-days: 90

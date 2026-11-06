@@ -30,7 +30,7 @@ from tier0.tickets.fake import FakeTicketAdapter
 from tier0.tickets.jira_adapter import JiraAdapter
 from tier0.tickets.postgres_store import PostgresSubmissionStore
 from tier0.tickets.status import TicketStatusService
-from tier0.tickets.submission import TicketSubmissionService
+from tier0.tickets.submission import SubmissionStore, TicketSubmissionService
 
 
 class ChatNotConfigured(Exception):
@@ -67,7 +67,17 @@ def jira_config(settings: Settings) -> JiraConfig:
     )
 
 
-def build_components(settings: Settings, pool: ConnectionPool) -> Components:
+def build_components(
+    settings: Settings,
+    pool: ConnectionPool | None,
+    *,
+    submission_store: SubmissionStore | None = None,
+) -> Components:
+    """Wire the agent's parts. Without a database, pass an in-memory ``submission_store``."""
+    if submission_store is None:
+        if pool is None:
+            raise ChatNotConfigured("a database pool or a submission store is required")
+        submission_store = PostgresSubmissionStore(pool)
     missing = settings.missing_chat_settings()
     if missing:
         raise ChatNotConfigured(f"chat needs these settings: {', '.join(missing)}")
@@ -120,7 +130,7 @@ def build_components(settings: Settings, pool: ConnectionPool) -> Components:
         ),
         rewriter=QuestionRewriter(chat),
         drafter=TicketDrafter(chat),
-        submission=TicketSubmissionService(adapter, PostgresSubmissionStore(pool)),
+        submission=TicketSubmissionService(adapter, submission_store),
         status=TicketStatusService(adapter),
     )
     controls = (
