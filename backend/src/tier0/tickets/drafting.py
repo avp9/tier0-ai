@@ -29,6 +29,12 @@ SYSTEM_PROMPT = (
     '"assumptions": ["<anything you inferred that the employee did not say>", ...], '
     '"category": "IT" or "HR" or null, '
     '"priority": "Low" or "Medium" or "High" or "Critical" or null}\n'
+    "Cover ONLY the issue the employee is asking to raise now, which is the most recent "
+    "problem they described. The conversation may contain earlier, unrelated topics that were "
+    "already handled: leave those out of the summary, reported, already_tried and assumptions. "
+    "Include something from an earlier message only when it is clearly about this same issue. "
+    "Never list a step as already tried unless the employee said they tried it for this issue; "
+    "a step the assistant described, or one taken for a different problem, does not count.\n"
     "Keep the employee's own facts under reported and tried; put guesses only under "
     "assumptions. Do not invent details. Use null when unknown. Set priority only if the "
     "employee's words clearly indicate urgency or impact."
