@@ -41,6 +41,8 @@ class Settings(BaseSettings):
     login_max_failures_per_ip: int = Field(default=20, ge=1)
     login_window_minutes: int = Field(default=15, ge=1)
     chat_messages_per_minute: int = Field(default=20, ge=1)
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
+    log_format: Literal["auto", "json", "text"] = "auto"  # auto: text locally, JSON elsewhere
 
     llm_provider: Literal["openai", "fake"] = "openai"
     ticketing_provider: Literal["jira", "fake"] = "jira"
@@ -69,6 +71,10 @@ class Settings(BaseSettings):
         if (self.llm_provider == "fake" or self.ticketing_provider == "fake") and not self.is_local:
             raise ValueError("fake providers are only allowed when APP_ENV is local or e2e")
         return self
+
+    @property
+    def log_json(self) -> bool:
+        return self.log_format == "json" or (self.log_format == "auto" and not self.is_local)
 
     @property
     def is_local(self) -> bool:

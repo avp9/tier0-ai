@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from functools import partial
@@ -24,6 +25,8 @@ from tier0.auth.sessions import SessionCodec
 from tier0.auth.users import UserStore, seed_demo_users
 from tier0.config import Settings
 from tier0.db.migrate import upgrade_with_lock
+from tier0.observability.context import start_request
+from tier0.observability.logs import configure_logging
 from tier0.rag.indexer import IndexNotFoundError
 from tier0.rag.retriever import IndexMismatchError
 
@@ -100,10 +103,48 @@ def create_app(
             response.headers["Strict-Transport-Security"] = HSTS
         return response
 
+    @app.middleware("http")
+    async def request_context(
+        request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
+        """Give every request a correlation ID and write one access line (never the query)."""
+        ctx = start_request(request.headers.get("X-Request-ID"))
+        request.state.request_id = ctx.request_id  # for the error handler, which runs outside
+        started = time.perf_counter()
+        status_code = 500
+        try:
+            response = await call_next(request)
+            status_code = response.status_code
+            response.headers["X-Request-ID"] = ctx.request_id
+            return response
+        finally:
+            if request.url.path != "/api/health":  # probes would drown everything else
+                log.info(
+                    "request",
+                    extra={
+                        "fields": {
+                            "method": request.method,
+                            "path": request.url.path,
+                            "status": status_code,
+                            "duration_ms": round((time.perf_counter() - started) * 1000, 1),
+                        }
+                    },
+                )
+
     @app.exception_handler(Exception)
     async def unexpected_error(request: Request, error: Exception) -> JSONResponse:
-        log.exception("unhandled error on %s %s", request.method, request.url.path)
-        return JSONResponse({"detail": "Something went wrong. Please try again."}, status_code=500)
+        # This runs outside the request middleware, so the ID is read from the request itself.
+        request_id = getattr(request.state, "request_id", None)
+        log.exception(
+            "unhandled error on %s %s",
+            request.method,
+            request.url.path,
+            extra={"fields": {"request_id": request_id}},
+        )
+        headers = {"X-Request-ID": request_id} if request_id else {}
+        return JSONResponse(
+            {"detail": "Something went wrong. Please try again."}, status_code=500, headers=headers
+        )
 
     app.include_router(health_router)
     app.include_router(auth_router)
@@ -139,4 +180,6 @@ def _build_agent(settings: Settings, pool: ConnectionPool) -> BuiltAgent | None:
 
 def create_app_from_env() -> FastAPI:
     """Entry point for the server: ``uvicorn --factory tier0.api.app:create_app_from_env``."""
-    return create_app(Settings())  # type: ignore[call-arg]
+    settings = Settings()  # type: ignore[call-arg]
+    configure_logging(settings.log_level, json_lines=settings.log_json)
+    return create_app(settings)

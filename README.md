@@ -177,3 +177,7 @@ The largest dependency is the `kubernetes` client (119 MB), pulled in by `chroma
 ## Evaluation
 
 `backend/scripts/run_eval.py --providers real|fake` measures retrieval, answers, routing, ticket flows, latency and estimated cost, using the cases in `data/evaluation/`. The **Evaluation** workflow runs it nightly with the real providers (and skips with a warning until the keys are set). See `docs/evaluation-report.md` for what each number means and its limits. No real-provider results have been recorded yet.
+
+## Logs
+
+The server writes one JSON line per event with a request ID (also returned in the `X-Request-ID` header) and a conversation ID, with email addresses masked and no message text. `LOG_FORMAT` (`auto`/`json`/`text`) and `LOG_LEVEL` control it. See `docs/observability.md` for the fields, what is never logged, and how to follow a request in Log Analytics.

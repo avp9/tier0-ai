@@ -213,6 +213,17 @@ class TicketSubmissionService:
         self, *, thread_id: str, requester_email: str, ticket: PendingTicket
     ) -> SubmitResult:
         """Create the ticket exactly once, however often this is called for the same content."""
+        result = self._submit(thread_id, requester_email, ticket)
+        level = logging.INFO if result.outcome is not SubmitOutcome.UNKNOWN else logging.WARNING
+        log.log(
+            level,
+            "ticket submission %s",
+            result.outcome.value,
+            extra={"fields": {"outcome": result.outcome.value, "ticket_key": result.ticket_key}},
+        )
+        return result
+
+    def _submit(self, thread_id: str, requester_email: str, ticket: PendingTicket) -> SubmitResult:
         summary, description, category = self._require_complete(ticket)
         email = requester_email.strip().lower()
         row, created_now = self._store.begin(thread_id, email, payload_hash(email, ticket))

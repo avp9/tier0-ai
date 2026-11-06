@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
@@ -9,6 +10,8 @@ from tier0.api.deps import current_user, same_origin
 from tier0.auth.passwords import MAX_PASSWORD_CHARS, spend_verification_time, verify_password
 from tier0.auth.sessions import COOKIE_NAME
 from tier0.auth.users import User
+
+log = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -36,6 +39,9 @@ def login(body: LoginRequest, request: Request) -> Response:
 
     wait = state.limiter.retry_after(email, ip)
     if wait is not None:
+        log.warning(
+            "login rate limit reached", extra={"fields": {"email": email, "retry_after_s": wait}}
+        )
         raise HTTPException(
             status.HTTP_429_TOO_MANY_REQUESTS,
             "Too many attempts. Please try again later.",
@@ -50,9 +56,11 @@ def login(body: LoginRequest, request: Request) -> Response:
         valid = verify_password(found[1], body.password)
     if not valid or found is None:
         state.limiter.record_failure(email, ip)
+        log.warning("login failed", extra={"fields": {"email": email}})
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, INVALID_LOGIN)
 
     state.limiter.record_success(email)
+    log.info("login succeeded", extra={"fields": {"user_id": str(found[0].id)}})
     response = Response(status_code=status.HTTP_204_NO_CONTENT)
     response.set_cookie(
         COOKIE_NAME,
