@@ -1,9 +1,15 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, Field, SecretStr, field_validator
+from typing import Literal
+
+from pydantic import BaseModel, Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from tier0.tickets.models import validate_email
+
+# Environments that are not real deployments: plain-HTTP cookies, API docs, tolerant chat start-up,
+# and the only places fake providers may run.
+LOCAL_ENVS = frozenset({"local", "e2e"})
 
 
 class DemoUser(BaseModel):
@@ -36,6 +42,10 @@ class Settings(BaseSettings):
     login_window_minutes: int = Field(default=15, ge=1)
     chat_messages_per_minute: int = Field(default=20, ge=1)
 
+    llm_provider: Literal["openai", "fake"] = "openai"
+    ticketing_provider: Literal["jira", "fake"] = "jira"
+    e2e_token: SecretStr | None = None
+
     # Chat: language models, knowledge index and ticketing. Optional so the server can start
     # for sign-in work without them; see ``missing_chat_settings``.
     openai_api_key: SecretStr | None = None
@@ -54,9 +64,25 @@ class Settings(BaseSettings):
     jira_issue_type: str = "Task"
     jira_set_priority_field: bool = False
 
+    @model_validator(mode="after")
+    def _fakes_only_outside_deployments(self) -> Settings:
+        if (self.llm_provider == "fake" or self.ticketing_provider == "fake") and not self.is_local:
+            raise ValueError("fake providers are only allowed when APP_ENV is local or e2e")
+        return self
+
     @property
     def is_local(self) -> bool:
-        return self.app_env == "local"
+        return self.app_env in LOCAL_ENVS
+
+    @property
+    def e2e_controls_enabled(self) -> bool:
+        """Test-only endpoints exist only in the isolated e2e environment, with a token."""
+        return (
+            self.app_env == "e2e"
+            and self.llm_provider == "fake"
+            and self.ticketing_provider == "fake"
+            and self.e2e_token is not None
+        )
 
     @property
     def cookie_secure(self) -> bool:
@@ -65,10 +91,11 @@ class Settings(BaseSettings):
 
     def missing_chat_settings(self) -> list[str]:
         """Environment variables that chat needs but that are not set."""
-        required = {
-            "OPENAI_API_KEY": self.openai_api_key,
-            "JIRA_SERVER": self.jira_server,
-            "JIRA_USERNAME": self.jira_username,
-            "JIRA_API_TOKEN": self.jira_api_token,
-        }
+        required: dict[str, object] = {}
+        if self.llm_provider == "openai":
+            required["OPENAI_API_KEY"] = self.openai_api_key
+        if self.ticketing_provider == "jira":
+            required["JIRA_SERVER"] = self.jira_server
+            required["JIRA_USERNAME"] = self.jira_username
+            required["JIRA_API_TOKEN"] = self.jira_api_token
         return [name for name, value in required.items() if not value]

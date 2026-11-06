@@ -11,10 +11,11 @@ from fastapi.responses import JSONResponse
 from psycopg_pool import ConnectionPool
 
 from tier0.agent.checkpoint import make_pool
-from tier0.agent.factory import ChatNotConfigured, build_agent_from_settings
+from tier0.agent.factory import BuiltAgent, ChatNotConfigured, build_agent_from_settings
 from tier0.agent.service import AgentService
 from tier0.api.routes_auth import router as auth_router
 from tier0.api.routes_chat import router as chat_router
+from tier0.api.routes_e2e import router as e2e_router
 from tier0.api.routes_health import database_check, migrations_check
 from tier0.api.routes_health import router as health_router
 from tier0.api.static import frontend_available, mount_frontend
@@ -69,10 +70,13 @@ def create_app(
                 "migrations": partial(migrations_check, active),
             }
             app.state.agent = agent
+            app.state.e2e_controls = None
             if agent is None:
-                app.state.agent, index_check = _build_agent(settings, active)
-                if index_check is not None:
-                    checks["knowledge_index"] = index_check
+                built = _build_agent(settings, active)
+                app.state.agent = built.service if built else None
+                if built is not None:
+                    app.state.e2e_controls = built.controls
+                    checks["knowledge_index"] = built.index_check
             app.state.readiness_checks = checks
             yield
         finally:
@@ -104,6 +108,8 @@ def create_app(
     app.include_router(health_router)
     app.include_router(auth_router)
     app.include_router(chat_router)
+    if settings.e2e_controls_enabled:
+        app.include_router(e2e_router)
     _serve_frontend(app, settings)  # last: its catch-all route must not shadow the API
     return app
 
@@ -120,18 +126,15 @@ def _serve_frontend(app: FastAPI, settings: Settings) -> None:
         raise FileNotFoundError(f"STATIC_DIR {directory} has no index.html (was the app built?)")
 
 
-def _build_agent(
-    settings: Settings, pool: ConnectionPool
-) -> tuple[AgentService | None, Callable[[], bool] | None]:
-    """Build the real agent. Outside local development a misconfigured server refuses to start."""
+def _build_agent(settings: Settings, pool: ConnectionPool) -> BuiltAgent | None:
+    """Build the agent. Outside local development a misconfigured server refuses to start."""
     try:
-        built = build_agent_from_settings(settings, pool)
+        return build_agent_from_settings(settings, pool)
     except (ChatNotConfigured, IndexNotFoundError, IndexMismatchError) as error:
         if not settings.is_local:
             raise
         log.warning("chat is disabled for local development: %s", error)
-        return None, None
-    return built.service, built.index_check
+        return None
 
 
 def create_app_from_env() -> FastAPI:

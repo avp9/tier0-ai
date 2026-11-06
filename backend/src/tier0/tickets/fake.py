@@ -40,6 +40,14 @@ class FakeTicketAdapter:
         self._failure: TicketError | None = None
         self._lose_next_response = False
 
+    def reset(self) -> None:
+        """Forget every ticket and pending failure (used between end-to-end tests)."""
+        self.tickets.clear()
+        self.create_calls = 0
+        self._next_number = 1
+        self._failure = None
+        self._lose_next_response = False
+
     def fail_next(self, error: TicketError) -> None:
         """The next call (create or read) raises ``error``; a create then stores nothing."""
         self._failure = error

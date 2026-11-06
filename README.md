@@ -146,3 +146,16 @@ npm run build      # produces frontend/dist
 To serve the built app from the API (one origin, one process), set `STATIC_DIR=../frontend/dist` before starting the API. The server then returns the app for every non-API path, with a strict Content-Security-Policy (no inline script or style), long-lived caching for the hashed assets and `no-cache` for the page itself. A server that is not running locally refuses to start if `STATIC_DIR` has no build in it.
 
 What the UI does: sign in; ask a question and see the answer with its sources as a list; accept or decline a ticket offer with buttons; review a ticket card with **Create ticket** / **Cancel** (the ticket is only created by the employee's own click); pick one of several tickets from a list; reload the page and carry on (the conversation id lives in this tab's session storage; nothing else is stored). Replies are always shown as plain text, so markup in a reply or a source title is displayed, never run, and a ticket link is only shown if its address is http(s).
+
+## End-to-end tests (Docker Compose + Playwright)
+
+`docker compose up -d --build --wait` starts the real app and Postgres with **fake** language models and a **fake** ticket system, serving the built UI on <http://localhost:8000>. Fakes are refused unless `APP_ENV` is `local` or `e2e`, and the test-control endpoints (`/api/_e2e/*`, used to seed tickets and script failures) exist only when `APP_ENV=e2e` and `E2E_TOKEN` is set; without the right `X-E2E-Token` they answer 404.
+
+```bash
+docker compose up -d --build --wait
+cd e2e && npm ci && npx playwright install chromium
+E2E_TOKEN=e2e-local-token npm test      # login, AT-01 to AT-18, accessibility (axe)
+docker compose down -v
+```
+
+AT-04 and AT-09 are reinterpreted per ADR 0001: the requester's email always comes from the sign-in session, so the agent never asks for one. The fake "models" are deterministic rule-based stand-ins; they prove the wiring, not answer quality (that is the evaluation workflow, T22).
