@@ -279,7 +279,7 @@ See `PRODUCT_BACKLOG.md` for tasks and dependencies.
 ## 10. Known risks
 
 - **The knowledge base is mostly IT ticket resolutions, not policy.** Answers may read like support notes, and Knowledge Gap pruning has to be thorough or escalation tests become unreliable.
-- **Index size and cold start:** about 50k vectors in the image. Measure in M5, and if startup is too slow, revisit ADR 0002.
+- **Index size and cold start:** about 21k vectors (roughly 100-200 MB) in the image. Measure in M5, and if startup is too slow, revisit ADR 0002.
 - **Two LLM providers** mean two keys, two failure modes, and the cost of keeping the fallback path tested.
 - **Jira API limits on the free tier.** The evaluation and smoke runs must stay small.
 - **Spec deviations** (ADR 0001, React and Postgres instead of the spec's Gradio and JSON suggestions) have to be explained to graders in `docs/design-decisions.md`.
