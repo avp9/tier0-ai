@@ -20,6 +20,7 @@ from tier0.rag.evaluation import (
     evaluate_gap_separation,
     evaluate_retrieval,
     load_cases,
+    suggest_threshold,
 )
 from tier0.rag.gaps import load_gap_topics
 from tier0.rag.retriever import Retriever
@@ -67,6 +68,14 @@ def print_report(report: RetrievalReport, separation: SeparationReport) -> None:
     )
     verdict = "yes" if separation.separable else "no, scores overlap"
     print(f"  one threshold separates them: {verdict}")
+    suggestion = suggest_threshold(
+        separation.answerable_scores, [g.top_score for g in separation.gap_scores]
+    )
+    print(
+        f"  suggested RETRIEVAL_SCORE_THRESHOLD {suggestion.threshold:.3f} "
+        f"(keeps {suggestion.answerable_kept:.0%} of answerable, "
+        f"rejects {suggestion.gaps_rejected:.0%} of gap questions)"
+    )
 
 
 def main() -> None:
