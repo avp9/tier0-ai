@@ -81,3 +81,18 @@ The employee is never asked for their email (it comes from the login). The flow,
 4. **Create once:** the ticket carries a submission id. Repeats, double clicks, retries after a timeout, and a crash right after Jira accepted the ticket all end with exactly one ticket, because the agent looks the ticket up by that id before ever creating another.
 
 The conversation pauses at each question and can be resumed after a server restart.
+
+## The agent
+
+`tier0.agent.service.AgentService.send(thread_id=..., requester_email=..., message=...)` handles one employee message and returns a `ChatTurn`: the reply, what the agent is now waiting for (`offer_ticket`, `collect_ticket_details`, `confirm_ticket`, `select_ticket`, or nothing), sources, a created ticket if any, and the workflow status. It resumes a paused conversation automatically, including after a restart, and refuses a thread that belongs to a different employee.
+
+Each message is classified, then routed:
+
+| Intent | What happens |
+|---|---|
+| Knowledge question | Answer with sources, or (no reliable answer) offer a ticket. Follow-ups are rewritten as standalone questions first. |
+| Create ticket | Collect details, preview, explicit yes, create once. A low-confidence request is checked first. |
+| Ticket status | None / one / several (pick one). A typed ticket key is looked up directly, scoped to the requester. |
+| Small talk, out of scope, ambiguous | Fixed polite replies and a clarifying question; no model call, no action. |
+
+If the employee ignores an offer or a list and says something new, the new message is handled as a fresh request.

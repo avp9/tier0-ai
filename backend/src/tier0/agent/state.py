@@ -8,7 +8,8 @@ from pydantic import BaseModel
 
 from tier0.intent.types import IntentResult, Turn
 from tier0.rag.answerability import AnswerabilityDecision
-from tier0.tickets.models import Category, Priority, TicketSummary
+from tier0.rag.answering import Source
+from tier0.tickets.models import Category, CreatedTicket, Priority, TicketSummary
 
 
 class WorkflowStatus(StrEnum):
@@ -79,6 +80,9 @@ class AgentState(TypedDict, total=False):
     pending_ticket: PendingTicket | None
     ticket_choices: list[TicketSummary]
     selected_ticket_key: str | None
+    selection_attempts: int
+    sources: list[Source]
+    created_ticket: CreatedTicket | None
     reply: str
 
 
@@ -97,5 +101,8 @@ def initial_state(requester_email: str) -> AgentState:
         pending_ticket=None,
         ticket_choices=[],
         selected_ticket_key=None,
+        selection_attempts=0,
+        sources=[],
+        created_ticket=None,
         reply="",
     )

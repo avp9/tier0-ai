@@ -19,6 +19,8 @@ ALLOWED_STATE_TYPES: list[tuple[str, str]] = [
     ("tier0.rag.answerability", "ScoreSignal"),
     ("tier0.rag.answerability", "SufficiencySignal"),
     ("tier0.tickets.models", "TicketSummary"),
+    ("tier0.tickets.models", "CreatedTicket"),
+    ("tier0.rag.answering", "Source"),
 ]
 
 

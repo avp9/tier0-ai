@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Hashable
 from typing import Any, Literal
 
 from langchain_core.runnables import RunnableConfig
@@ -16,9 +17,9 @@ from tier0.agent.state import (
     workflow_of,
 )
 from tier0.intent.types import Turn
-from tier0.tickets.confirmation import Reply, interpret
+from tier0.tickets.confirmation import Reply, interpret, wants_to_cancel
 from tier0.tickets.drafting import TicketDrafter, format_preview, next_question
-from tier0.tickets.models import Category
+from tier0.tickets.models import Category, CreatedTicket
 from tier0.tickets.submission import TicketSubmissionService
 
 MAX_DETAIL_QUESTIONS = 4
@@ -92,7 +93,9 @@ class TicketCreationFlow:
 
     def ask(self, state: TicketFlowState) -> dict[str, Any]:
         question = state.get("reply", "")
-        answer = interrupt({"type": "collect_ticket_details", "question": question})
+        answer = interrupt(
+            {"type": "collect_ticket_details", "prompt": question, "question": question}
+        )
         return {
             "turns": [_assistant(question), _user(answer)],
             "user_message": answer,
@@ -140,7 +143,12 @@ class TicketCreationFlow:
                 ),
                 "reply": result.reply,
             }
-        return self._finish(result.reply)
+        update = self._finish(result.reply)
+        if result.has_ticket and result.ticket_key:
+            update["created_ticket"] = CreatedTicket(
+                key=result.ticket_key, url=result.ticket_url or ""
+            )
+        return update
 
     def cancel(self, state: TicketFlowState) -> dict[str, Any]:
         return self._finish(CANCELLED_REPLY)
@@ -172,6 +180,11 @@ class TicketCreationFlow:
         return "prepare_question"
 
     @staticmethod
+    def after_ask(state: TicketFlowState) -> Literal["draft", "cancel"]:
+        """Leave the flow on an unmistakable "never mind"; any other reply is a detail."""
+        return "cancel" if wants_to_cancel(state.get("user_message", "")) else "draft"
+
+    @staticmethod
     def after_confirm(state: TicketFlowState) -> Literal["submit", "cancel", "reprompt", "give_up"]:
         answer = Reply(state.get("confirmation", Reply.UNCLEAR.value))
         if answer is Reply.YES:
@@ -191,35 +204,57 @@ class TicketCreationFlow:
         return "confirm"
 
 
+def add_ticket_flow_nodes(
+    graph: StateGraph[TicketFlowState, None, TicketFlowState, TicketFlowState],
+    flow: TicketCreationFlow,
+    *,
+    prefix: str = "",
+) -> str:
+    """Register the flow's nodes directly on ``graph`` and return the entry node's name.
+
+    The nodes live in the caller's graph, not in a subgraph, because LangGraph only copies a
+    subgraph's progress into the parent's saved state once the subgraph finishes. Directly
+    registered nodes keep the saved workflow and reply correct while the employee is deciding.
+    """
+
+    def name(short: str) -> str:
+        return f"{prefix}{short}"
+
+    for short, node in (
+        ("draft", flow.draft), ("prepare_question", flow.prepare_question), ("ask", flow.ask),
+        ("preview", flow.preview), ("confirm", flow.confirm), ("reprompt", flow.reprompt),
+        ("submit", flow.submit), ("cancel", flow.cancel), ("give_up", flow.give_up),
+    ):  # fmt: skip
+        graph.add_node(name(short), node)
+
+    def route(*shorts: str) -> dict[Hashable, str]:
+        return {short: (END if short == "__end__" else name(short)) for short in shorts}
+
+    graph.add_conditional_edges(
+        name("draft"), flow.after_draft, route("prepare_question", "preview", "give_up")
+    )
+    graph.add_edge(name("prepare_question"), name("ask"))
+    graph.add_conditional_edges(name("ask"), flow.after_ask, route("draft", "cancel"))
+    graph.add_edge(name("preview"), name("confirm"))
+    graph.add_conditional_edges(
+        name("confirm"), flow.after_confirm, route("submit", "cancel", "reprompt", "give_up")
+    )
+    graph.add_edge(name("reprompt"), name("confirm"))
+    graph.add_conditional_edges(
+        name("submit"), flow.after_submit, route("confirm", "give_up", "__end__")
+    )
+    graph.add_edge(name("cancel"), END)
+    graph.add_edge(name("give_up"), END)
+    return name("draft")
+
+
 def build_ticket_flow(
     drafter: TicketDrafter,
     submission: TicketSubmissionService,
-    checkpointer: BaseCheckpointSaver[Any],
+    checkpointer: BaseCheckpointSaver[Any] | None = None,
 ) -> CompiledStateGraph[Any, Any, Any, Any]:
-    flow = TicketCreationFlow(drafter, submission)
+    """The ticket flow on its own (the full agent adds the same nodes to its graph)."""
     graph = StateGraph(TicketFlowState)
-    graph.add_node("draft", flow.draft)
-    graph.add_node("prepare_question", flow.prepare_question)
-    graph.add_node("ask", flow.ask)
-    graph.add_node("preview", flow.preview)
-    graph.add_node("confirm", flow.confirm)
-    graph.add_node("reprompt", flow.reprompt)
-    graph.add_node("submit", flow.submit)
-    graph.add_node("cancel", flow.cancel)
-    graph.add_node("give_up", flow.give_up)
-
-    graph.add_edge(START, "draft")
-    graph.add_conditional_edges(
-        "draft", flow.after_draft, ["prepare_question", "preview", "give_up"]
-    )
-    graph.add_edge("prepare_question", "ask")
-    graph.add_edge("ask", "draft")
-    graph.add_edge("preview", "confirm")
-    graph.add_conditional_edges(
-        "confirm", flow.after_confirm, ["submit", "cancel", "reprompt", "give_up"]
-    )
-    graph.add_edge("reprompt", "confirm")
-    graph.add_conditional_edges("submit", flow.after_submit, ["confirm", "give_up", END])
-    graph.add_edge("cancel", END)
-    graph.add_edge("give_up", END)
+    entry = add_ticket_flow_nodes(graph, TicketCreationFlow(drafter, submission))
+    graph.add_edge(START, entry)
     return graph.compile(checkpointer=checkpointer)
