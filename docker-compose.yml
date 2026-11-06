@@ -23,6 +23,7 @@ services:
       - "127.0.0.1:8000:8000"
     environment:
       APP_ENV: e2e
+      LOG_FORMAT: json
       LLM_PROVIDER: fake
       TICKETING_PROVIDER: fake
       E2E_TOKEN: ${E2E_TOKEN:-e2e-local-token}
