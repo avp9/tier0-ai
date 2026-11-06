@@ -140,11 +140,11 @@ users
   created_at     timestamptz
 
 ticket_submissions                           -- duplicate protection (FR-TKT-06)
-  id               uuid  pk                  -- idempotency key, created at preview time
+  id               uuid  pk                  -- idempotency key, created when the employee confirms
   thread_id        text  not null
   requester_email  text  not null
   payload_hash     text  not null
-  status           text  not null            -- pending | submitted | failed | unknown
+  status           text  not null            -- pending | submitted | failed | unknown | cancelled
   ticket_key       text  null                -- e.g. SUP-123
   created_at, updated_at  timestamptz
 

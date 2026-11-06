@@ -70,3 +70,14 @@ DATABASE_URL=postgresql://user:password@localhost:5432/tier0 \
 ```
 
 To run the database tests locally, point `TIER0_TEST_DATABASE_URL` at any Postgres you can create databases in (each test creates and drops its own database). Without it those tests are skipped; CI always runs them.
+
+## Raising a ticket
+
+The employee is never asked for their email (it comes from the login). The flow, in `tier0.agent.ticket_flow`:
+
+1. **Collect:** the agent drafts a title, description and category from the conversation and asks only for what is missing, one question at a time. If the language model is down it falls back to quoting the employee's own words.
+2. **Preview:** it shows the requester, title, category, priority and description and asks for confirmation.
+3. **Confirm:** only a clear yes creates the ticket. `no` cancels. Anything else (a question, "yes but...", "maybe") is asked again, and after five unclear answers it stops without creating anything.
+4. **Create once:** the ticket carries a submission id. Repeats, double clicks, retries after a timeout, and a crash right after Jira accepted the ticket all end with exactly one ticket, because the agent looks the ticket up by that id before ever creating another.
+
+The conversation pauses at each question and can be resumed after a server restart.
