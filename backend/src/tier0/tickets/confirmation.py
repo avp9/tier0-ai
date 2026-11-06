@@ -21,6 +21,12 @@ NEGATIVE = {
     "dont", "do not", "dont create it", "do not create it", "dont submit", "not now",
     "no thanks", "forget it", "leave it", "scrap it", "cancel it", "stop it", "dont do it",
 }  # fmt: skip
+# Phrases that abandon a task. A bare "no" is excluded: it is a fine answer to
+# "anything you've already tried?".
+CANCEL_PHRASES = {
+    "cancel", "cancel it", "never mind", "nevermind", "forget it", "stop", "stop it", "abort",
+    "scrap it", "discard", "leave it", "not now", "dont bother", "do not bother",
+}  # fmt: skip
 FILLER = {"please", "thanks", "thank", "you", "kindly", "then", "just"}
 _LONGEST = max(len(phrase.split()) for phrase in AFFIRMATIVE | NEGATIVE)
 
@@ -60,3 +66,12 @@ def interpret(text: str) -> Reply:
         else:
             return Reply.UNCLEAR
     return next(iter(polarities)) if len(polarities) == 1 else Reply.UNCLEAR
+
+
+def wants_to_cancel(text: str) -> bool:
+    """True only when the whole message is an unmistakable "forget it"."""
+    if "?" in text:
+        return False
+    tokens = _tokens(text)
+    phrase = " ".join(tokens)
+    return bool(tokens) and phrase in CANCEL_PHRASES
