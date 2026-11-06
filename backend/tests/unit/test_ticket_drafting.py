@@ -123,6 +123,11 @@ def test_the_conversation_is_sent_as_json_data_with_an_untrusted_warning() -> No
     assert "untrusted" in SYSTEM_PROMPT
 
 
+def test_the_prompt_scopes_the_ticket_to_the_current_issue() -> None:
+    assert "ONLY the issue the employee is asking to raise now" in SYSTEM_PROMPT
+    assert "unrelated" in SYSTEM_PROMPT and "different problem" in SYSTEM_PROMPT
+
+
 # --- when the model misbehaves or is down ---------------------------------------------
 
 
