@@ -32,7 +32,7 @@ jobs:
       JIRA_SERVER: ${{ secrets.JIRA_SERVER }}
       JIRA_USERNAME: ${{ secrets.JIRA_USERNAME }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: azure/login@v2
         with:
           client-id: ${{ vars.AZURE_CLIENT_ID }}
