@@ -39,7 +39,7 @@ jobs:
       REQUIRE_DB_TESTS: "1"
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
           cache-dependency-glob: backend/uv.lock
@@ -134,7 +134,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
       # A small index stands in for the real one (which needs an API key and is built at deploy).
       - name: Build a fixture index to supply to the image
         working-directory: backend
@@ -196,7 +196,7 @@ jobs:
         working-directory: backend
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
       - run: uv python install 3.12
       - run: uv sync --locked
       # The four chromadb advisories below affect only Chroma's HTTP server (REST endpoints and its
