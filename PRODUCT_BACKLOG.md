@@ -63,8 +63,8 @@ Each item is one PR. Pick the highest-priority item whose dependencies are **Don
 | ID | Branch | Item | Acceptance criteria | Depends on | Status |
 |---|---|---|---|---|---|
 | T22 | `feat/eval-workflow` | Nightly and on-demand evaluation | `eval.yml` runs `run_eval.py` against the real providers (staging label) and measures Recall@k, groundedness, routing accuracy, escalation rate, ticket flows, p50/p95 latency and cost. Report saved as an artifact and in `docs/evaluation-report.md`. | T21 | Done |
-| T23 | `feat/observability` | Structured logs and correlation IDs | JSON logs carry a correlation ID per request and per thread, with emails masked and no secrets or message bodies at INFO. Logs flow to Log Analytics. | T16 | In review |
-| T24 | `test/failure-and-adversarial` | Harden the failure paths | Tests for OpenAI and JEV outages, Jira timeouts with an unknown outcome, rejected payloads, and prompt injection in user input and in KB content. Issues found are fixed. | T14b | Todo |
+| T23 | `feat/observability` | Structured logs and correlation IDs | JSON logs carry a correlation ID per request and per thread, with emails masked and no secrets or message bodies at INFO. Logs flow to Log Analytics. | T16 | Done |
+| T24 | `test/failure-and-adversarial` | Harden the failure paths | Tests for OpenAI and JEV outages, Jira timeouts with an unknown outcome, rejected payloads, and prompt injection in user input and in KB content. Issues found are fixed. | T14b | In review |
 | T25 | `docs/submission` | README, architecture, design decisions, demo | README with a clean-clone setup, environment variables, KB build steps, run and deploy instructions. Architecture diagram. `design-decisions.md` (spec deviations, ADR links). Demo script, plus screenshots or a recording of all three flows. CHANGELOG. | T22 | Todo |
 
 ## Stretch (after all baseline items are done)

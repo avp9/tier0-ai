@@ -1,4 +1,3 @@
-
 import gzip
 import json
 import re
@@ -15,24 +14,44 @@ DATASETS = [
 ]
 
 OUTPUT_PATH = (
-    Path(__file__).resolve().parent.parent / "data" / "knowledge_base" / "qa_dataset.json.gz"
+    Path(__file__).resolve().parent.parent
+    / "data"
+    / "knowledge_base"
+    / "qa_dataset.json.gz"
 )
 
 QUESTION_KEYS = [
-    "question", "user_message", "query", "prompt",
-    "short_description", "issue/request", "body",
-    "text", "ticket_description", "description", "content",
+    "question",
+    "user_message",
+    "query",
+    "prompt",
+    "short_description",
+    "issue/request",
+    "body",
+    "text",
+    "ticket_description",
+    "description",
+    "content",
 ]
 
 ANSWER_KEYS = [
-    "answer", "expected_response", "response",
-    "resolution", "resolution_steps", "close_notes",
-    "output", "assistant_answer", "solution",
+    "answer",
+    "expected_response",
+    "response",
+    "resolution",
+    "resolution_steps",
+    "close_notes",
+    "output",
+    "assistant_answer",
+    "solution",
 ]
 
 CATEGORY_KEYS = [
-    "category", "department",
-    "label", "ticket_category", "assignment_group",
+    "category",
+    "department",
+    "label",
+    "ticket_category",
+    "assignment_group",
 ]
 
 SUBCATEGORY_KEYS = ["subcategory"]
@@ -41,14 +60,13 @@ RESOLVED_AT = [
     "resolved_at",
 ]
 
+
 def clean(value):
     """Convert supported values into readable text."""
     if value is None:
         return ""
     if isinstance(value, list):
-        return "\n".join(
-            clean(item) for item in value if clean(item)
-        )
+        return "\n".join(clean(item) for item in value if clean(item))
     if isinstance(value, dict):
         return json.dumps(value, ensure_ascii=False)
     return re.sub(r"\s+", " ", str(value)).strip()
@@ -56,16 +74,12 @@ def clean(value):
 
 def get_value(row, keys):
     """Return the first nonempty matching field."""
-    normalized = {
-        str(key).lower().strip(): value
-        for key, value in row.items()
-    }
+    normalized = {str(key).lower().strip(): value for key, value in row.items()}
     for key in keys:
         value = clean(normalized.get(key.lower()))
         if value:
             return value
     return ""
-
 
 
 def get_category(row, source):
@@ -79,17 +93,20 @@ def get_category(row, source):
 
     return "IT Support"
 
+
 def get_subcategory(row, source):
     category = get_value(row, CATEGORY_KEYS)
     subcategory = get_value(row, SUBCATEGORY_KEYS)
 
     return f"{category} {subcategory}"
 
+
 def get_resolution_time(row, source):
     resolution = get_value(row, RESOLVED_AT)
     if resolution:
         return resolution
     return None
+
 
 def extract_messages(row, source):
     """Extract conversational pairs when messages are available."""
@@ -126,11 +143,7 @@ def extract_messages(row, source):
             flags=re.IGNORECASE | re.DOTALL,
         )
         if matches:
-            return [
-                (clean(q), clean(a))
-                for q, a in matches
-                if clean(q) and clean(a)
-            ]
+            return [(clean(q), clean(a)) for q, a in matches if clean(q) and clean(a)]
 
     return []
 
@@ -166,15 +179,17 @@ def convert_row(row, source, tick_num):
     if not answer or not question:
         return []
 
-    return [{
-        "ticketid": ticketid,
-        "question": question,
-        "answer": answer,
-        "category": category,
-        "source": source,
-        "resolution_time": resolution_time,
-        "subcategory": subcategory,
-    }]
+    return [
+        {
+            "ticketid": ticketid,
+            "question": question,
+            "answer": answer,
+            "category": category,
+            "source": source,
+            "resolution_time": resolution_time,
+            "subcategory": subcategory,
+        }
+    ]
 
 
 def load_splits(dataset_id):
@@ -184,8 +199,7 @@ def load_splits(dataset_id):
     if hasattr(dataset, "keys"):
         splits = list(dataset.keys())
         preferred = [
-            split for split in ("train", "validation", "test")
-            if split in splits
+            split for split in ("train", "validation", "test") if split in splits
         ]
         return [(name, dataset[name]) for name in (preferred or splits)]
 
@@ -221,10 +235,12 @@ def main():
             print(f"  Processed {dataset_id}")
 
         except Exception as exc:
-            failures.append({
-                "dataset": dataset_id,
-                "error": str(exc),
-            })
+            failures.append(
+                {
+                    "dataset": dataset_id,
+                    "error": str(exc),
+                }
+            )
             print(f"  FAILED: {exc}")
 
     output = OUTPUT_PATH

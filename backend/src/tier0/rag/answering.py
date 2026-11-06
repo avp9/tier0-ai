@@ -88,6 +88,10 @@ class AnswerService:
             return AnswerResult(
                 outcome=Outcome.UNAVAILABLE, reply=UNAVAILABLE_REPLY, retrieved_ids=retrieved_ids
             )
+        if not text:  # a blank answer must never be shown as if it were one
+            return AnswerResult(
+                outcome=Outcome.UNAVAILABLE, reply=UNAVAILABLE_REPLY, retrieved_ids=retrieved_ids
+            )
 
         sources = self._sources(decision, passages)
         titles = "; ".join(s.title for s in sources)

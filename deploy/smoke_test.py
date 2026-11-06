@@ -77,14 +77,18 @@ def run(base: str) -> int:
 
     status, _, body = smoke.call("GET", "/api/ready")
     smoke.check(
-        "ready: database, schema and knowledge index", status == 200, f"{status} {body[:200]!r}"
+        "ready: database, schema and knowledge index",
+        status == 200,
+        f"{status} {body[:200]!r}",
     )
 
     status, headers, body = smoke.call("GET", "/")
     csp = {k.lower(): v for k, v in headers.items()}.get("content-security-policy", "")
     smoke.check("web app is served", status == 200 and b'<div id="root"' in body, str(status))
     smoke.check(
-        "strict content security policy", "script-src 'self'" in csp and "unsafe" not in csp, csp
+        "strict content security policy",
+        "script-src 'self'" in csp and "unsafe" not in csp,
+        csp,
     )
 
     status, _, _ = smoke.call("POST", "/api/chat", {"message": "hello"})

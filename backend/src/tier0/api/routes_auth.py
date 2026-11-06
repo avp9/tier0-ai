@@ -6,7 +6,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field
 
-from tier0.api.deps import current_user, same_origin
+from tier0.api.deps import client_ip, current_user, same_origin
 from tier0.auth.passwords import MAX_PASSWORD_CHARS, spend_verification_time, verify_password
 from tier0.auth.sessions import COOKIE_NAME
 from tier0.auth.users import User
@@ -28,14 +28,10 @@ class Me(BaseModel):
     display_name: str
 
 
-def _client_ip(request: Request) -> str:
-    return request.client.host if request.client else "unknown"
-
-
 @router.post("/login", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(same_origin)])
 def login(body: LoginRequest, request: Request) -> Response:
     state = request.app.state
-    email, ip = body.email.strip().lower(), _client_ip(request)
+    email, ip = body.email.strip().lower(), client_ip(request)
 
     wait = state.limiter.retry_after(email, ip)
     if wait is not None:

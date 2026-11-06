@@ -14,6 +14,7 @@ from psycopg_pool import ConnectionPool
 from tier0.agent.checkpoint import make_pool
 from tier0.agent.factory import BuiltAgent, ChatNotConfigured, build_agent_from_settings
 from tier0.agent.service import AgentService
+from tier0.api.limits import BodyLimitMiddleware
 from tier0.api.routes_auth import router as auth_router
 from tier0.api.routes_chat import router as chat_router
 from tier0.api.routes_e2e import router as e2e_router
@@ -146,6 +147,7 @@ def create_app(
             {"detail": "Something went wrong. Please try again."}, status_code=500, headers=headers
         )
 
+    app.add_middleware(BodyLimitMiddleware, max_bytes=settings.max_request_bytes)
     app.include_router(health_router)
     app.include_router(auth_router)
     app.include_router(chat_router)

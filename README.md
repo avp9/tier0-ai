@@ -181,3 +181,7 @@ The largest dependency is the `kubernetes` client (119 MB), pulled in by `chroma
 ## Logs
 
 The server writes one JSON line per event with a request ID (also returned in the `X-Request-ID` header) and a conversation ID, with email addresses masked and no message text. `LOG_FORMAT` (`auto`/`json`/`text`) and `LOG_LEVEL` control it. See `docs/observability.md` for the fields, what is never logged, and how to follow a request in Log Analytics.
+
+## Failure and adversarial testing
+
+`docs/failure-and-adversarial-testing.md` lists what was attacked or broken on purpose, the problems that found (including a login lock-out that would have affected every user behind the Azure ingress), and what is still open. New settings: `TRUSTED_PROXY_HOPS` (reverse proxies in front of the app; 0 locally, 1 on Azure) and `MAX_REQUEST_BYTES` (default 65,536).
