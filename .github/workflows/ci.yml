@@ -128,6 +128,34 @@ jobs:
         if: always()
         run: docker compose down -v
 
+  image:
+    name: image
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      # A small index stands in for the real one (which needs an API key and is built at deploy).
+      - name: Build a fixture index to supply to the image
+        working-directory: backend
+        run: |
+          uv sync --frozen
+          uv run python scripts/build_index.py --embedder fake --kb-dir ../data/fixtures --index-dir "$RUNNER_TEMP/index"
+      - name: Build the production image
+        run: docker build --target prod --build-context index="$RUNNER_TEMP/index" -t tier0:ci .
+      - name: Refuses to build without an index
+        run: "! docker build --target prod -t tier0:noindex . 2>/dev/null"
+      - name: Runs as a non-root user
+        run: test "$(docker run --rm tier0:ci id -u)" != 0
+      - name: Refuses to start in production without its settings
+        run: |
+          if docker run --rm -e APP_ENV=production -e DATABASE_URL=postgresql://x@h/d \
+               -e SESSION_SECRET=0123456789012345678901234567890123456789 tier0:ci; then
+            echo "expected a startup failure"; exit 1
+          fi
+      - name: Report image size
+        run: docker image ls tier0:ci --format '### Image size{{"\n"}}{{.Size}}' >> "$GITHUB_STEP_SUMMARY"
+
   dependency-audit:
     runs-on: ubuntu-latest
     timeout-minutes: 10
