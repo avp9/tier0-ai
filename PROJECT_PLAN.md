@@ -167,29 +167,31 @@ All endpoints except `/api/health` and `/api/auth/login` require a session cooki
 | POST | `/api/auth/logout` | – | `204` |
 | GET | `/api/auth/me` | – | `{email, display_name}` |
 | POST | `/api/chat` | `{thread_id?: string, message: string}` | `ChatResponse` |
-| GET | `/api/chat/{thread_id}` | – | message history for that thread (owned by the caller) |
+| GET | `/api/chat/{thread_id}` | – | `{thread_id, messages: [{role, content}], pending_action}` for a thread the caller owns, else `404` |
 
 ```jsonc
 // ChatResponse
 {
-  "thread_id": "uuid",
-  "reply": "markdown text",
-  "intent": "knowledge|create_ticket|ticket_status|smalltalk|out_of_scope|ambiguous",
+  "thread_id": "uuid",                 // created by the server when the request has none; must be a UUID
+  "reply": "text",                     // plain text: the UI must not render it as HTML
+  "intent": "knowledge|create_ticket|ticket_status|smalltalk|out_of_scope|ambiguous|null",
   "sources": [{"document_id": "...", "title": "...", "category": "..."}],
   "pending_action": null | {
-    "type": "confirm_ticket",
-    "preview": {"requester_email": "...", "title": "...", "description": "...", "category": "IT|HR", "priority": "Low|Medium|High|Critical"}
-  } | {
-    "type": "select_ticket",
-    "options": [{"ticket_key": "SUP-12", "title": "...", "status": "..."}]
+    "type": "offer_ticket" | "collect_ticket_details" | "confirm_ticket" | "select_ticket",
+    "prompt": "what the agent just asked",
+    "preview": null | {"requester_email": "...", "title": "...", "description": "...",
+                       "category": "IT|HR", "priority": "Low|Medium|High|Critical|null"},  // confirm_ticket
+    "options": []  | [{"ticket_key": "SUP-12", "title": "...", "status": "..."}]            // select_ticket
   },
-  "ticket": null | {"ticket_key": "SUP-12", "url": "https://...", "status": "..."}
+  "ticket": null | {"ticket_key": "SUP-12", "url": "https://...", "status": null}
 }
 ```
 
-The UI's Confirm and Cancel buttons just send "yes" and "no" as ordinary messages. The graph decides what counts as a clear yes, so typed and clicked confirmations go through the same code path. That covers AT-08.
+`ticket.status` is null for a ticket just created (the platform has not reported one yet).
 
-Threads belong to the signed-in user, so requests for another user's `thread_id` return `404`.
+The UI's Confirm, Cancel and offer buttons (and a ticket picked from `options`) just send "yes", "no" or the ticket key as ordinary messages. The graph decides what counts as a clear yes, so typed and clicked confirmations go through the same code path. That covers AT-08.
+
+Threads belong to the signed-in user, so requests for another user's `thread_id` return `404`, indistinguishable from a thread that does not exist. Each user may send 20 messages a minute (`CHAT_MESSAGES_PER_MINUTE`); beyond that the API returns `429` with `Retry-After`. If chat is not configured the API returns `503`; outside local development such a server refuses to start.
 
 ## 6. Security
 

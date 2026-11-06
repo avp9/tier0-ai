@@ -56,3 +56,34 @@ class LoginRateLimiter:
     def _prune(self, now: float) -> None:
         for key in [k for k, v in self._failures.items() if not v or now - v[-1] >= self._window]:
             del self._failures[key]
+
+
+class SlidingWindowLimiter:
+    """At most ``max_events`` per key in any ``window_seconds``; every call counts."""
+
+    def __init__(
+        self,
+        max_events: int,
+        window_seconds: float,
+        clock: Callable[[], float] = time.monotonic,
+    ) -> None:
+        self._max = max_events
+        self._window = window_seconds
+        self._clock = clock
+        self._events: dict[str, deque[float]] = defaultdict(deque)
+
+    def hit(self, key: str) -> int | None:
+        """Record one event. Returns seconds to wait if the key is over its limit, else None."""
+        now = self._clock()
+        events = self._events[key]
+        while events and now - events[0] >= self._window:
+            events.popleft()
+        if len(events) >= self._max:
+            return max(1, int(events[0] + self._window - now + 0.999))
+        events.append(now)
+        if len(self._events) > _PRUNE_AT:
+            for stale in [
+                k for k, v in self._events.items() if not v or now - v[-1] >= self._window
+            ]:
+                del self._events[stale]
+        return None
