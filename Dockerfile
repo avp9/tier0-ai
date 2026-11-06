@@ -10,7 +10,7 @@
 # INDEX_HASH (from build_index.py, printed when it finishes) is required: it is recorded as an
 # image label, and it makes a build without a fresh index fail even if layers are cached.
 
-FROM node:22-bookworm-slim AS web
+FROM node:25-bookworm-slim AS web
 WORKDIR /web
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci --ignore-scripts
