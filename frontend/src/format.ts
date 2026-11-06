@@ -12,11 +12,23 @@ export function withoutSourcesLine(text: string, sources: Source[]): string {
   return text.endsWith(suffix) ? text.slice(0, -suffix.length) : text;
 }
 
-/** Text for the transcript: the card or the buttons already show the details, so don't repeat them. */
+const PREVIEW_START = "Here is the ticket I'm about to create";
+const RESELECT_START = "I wasn't sure which ticket you meant.";
+
+/**
+ * Text for the transcript: the card or the buttons already show the details, so the first
+ * prompt is shortened. A follow-up (such as "I need a clear answer") is the agent actually
+ * speaking, so it is shown as written.
+ */
 export function promptText(action: PendingAction): string {
-  if (action.type === "confirm_ticket" && action.preview) return REVIEW_PROMPT;
+  if (action.type === "confirm_ticket" && action.preview && action.prompt.startsWith(PREVIEW_START)) {
+    return REVIEW_PROMPT;
+  }
   if (action.type === "select_ticket" && action.options.length > 0) {
-    return choosePrompt(action.options.length);
+    if (action.prompt.startsWith(RESELECT_START)) {
+      return `${RESELECT_START} ${choosePrompt(action.options.length)}`;
+    }
+    if (action.prompt.startsWith("You have ")) return choosePrompt(action.options.length);
   }
   return action.prompt;
 }

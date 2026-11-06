@@ -39,7 +39,7 @@ class IntentResult(BaseModel):
     domain: Domain
     continuity: Continuity
     confidence: float = Field(ge=0.0, le=1.0)
-    source: Literal["jev", "openai"]
+    source: Literal["jev", "openai", "fake"]
     model: str = ""
 
     def is_confident(self, threshold: float = 0.6) -> bool:

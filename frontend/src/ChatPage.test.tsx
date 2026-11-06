@@ -136,6 +136,7 @@ describe("not repeating what is already on screen", () => {
             reply: "Here is the ticket I'm about to create:\n- Requester: alice\n- Title: VPN\nShall I create it?",
             pending_action: pending({
               type: "confirm_ticket",
+              prompt: "Here is the ticket I'm about to create:\n- Requester: alice\n- Title: VPN",
               preview: {
                 requester_email: "alice@buzztech.example",
                 title: "VPN",
@@ -154,6 +155,27 @@ describe("not repeating what is already on screen", () => {
     expect(screen.queryByText(/Here is the ticket I'm about to create/)).not.toBeInTheDocument();
   });
 
+  it("shows the agent's clarification when the answer to the preview was unclear", async () => {
+    const clarification = "I need a clear answer before I create anything. Reply yes to create the ticket, or no to cancel.";
+    stubApi({
+      "POST /api/chat": () =>
+        json(
+          chatReply({
+            reply: clarification,
+            pending_action: pending({
+              type: "confirm_ticket",
+              prompt: clarification,
+              preview: { requester_email: "a@b.co", title: "T", description: "D", category: "IT", priority: null },
+            }),
+          }),
+        ),
+    });
+    const { user } = renderChat();
+    await say(user, "hmm maybe");
+    expect(await within(conversation()).findByText(clarification)).toBeVisible();
+    expect(screen.getByRole("region", { name: "Ticket to be created" })).toBeVisible();
+  });
+
   it("does the same when the conversation is restored", async () => {
     sessionStorage.setItem("tier0.thread", THREAD);
     stubApi({
@@ -163,7 +185,7 @@ describe("not repeating what is already on screen", () => {
           messages: [{ role: "user", content: "raise a ticket" }],
           pending_action: pending({
             type: "confirm_ticket",
-            prompt: "A very long preview text that the card already shows",
+            prompt: "Here is the ticket I'm about to create:\n- Requester: a@b.co\n- Title: T",
             preview: { requester_email: "a@b.co", title: "T", description: "D", category: "IT", priority: null },
           }),
         }),
@@ -171,7 +193,7 @@ describe("not repeating what is already on screen", () => {
     renderChat();
     await screen.findByRole("region", { name: "Ticket to be created" });
     expect(screen.getByText("Please review the ticket below, then create it or cancel.")).toBeVisible();
-    expect(screen.queryByText(/A very long preview text/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Here is the ticket I'm about to create/)).not.toBeInTheDocument();
   });
 });
 
@@ -338,7 +360,7 @@ describe("choosing among tickets", () => {
         json(
           JSON.parse(String(init?.body)).message === "SUP-7"
             ? chatReply({ reply: "Ticket SUP-7: Laptop slow" })
-            : chatReply({ reply: "You have 2 tickets.", pending_action: pending({ type: "select_ticket", options }) }),
+            : chatReply({ reply: "You have 2 tickets.", pending_action: pending({ type: "select_ticket", options, prompt: "You have 2 tickets:\n1. SUP-5 ...\n2. SUP-7 ..." }) }),
         ),
     });
     const { user } = renderChat();
