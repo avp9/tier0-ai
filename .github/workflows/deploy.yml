@@ -22,7 +22,7 @@ concurrency:
   cancel-in-progress: false # never abandon a half-finished deployment
 
 env:
-  IMAGE: ghcr.io/${{ github.repository }}
+  IMAGE_REPO: ghcr.io/${{ github.repository }}
   SHA: ${{ github.event.workflow_run.head_sha || inputs.sha }}
 
 jobs:
@@ -81,7 +81,7 @@ jobs:
       - name: Build and push the image, tagged by commit
         id: ref
         run: |
-          image="${IMAGE,,}:${SHA}"
+          image="${IMAGE_REPO,,}:${SHA}"
           docker buildx build --target prod --push -t "$image" \
             --build-context index="$RUNNER_TEMP/index" \
             --build-arg INDEX_HASH="${{ steps.kb.outputs.hash }}" \
