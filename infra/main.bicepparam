@@ -13,3 +13,8 @@ param productionDemoUsers = readEnvironmentVariable('PRODUCTION_DEMO_USERS')
 
 param jiraServer = readEnvironmentVariable('JIRA_SERVER')
 param jiraUsername = readEnvironmentVariable('JIRA_USERNAME')
+
+// The images currently running, so an infrastructure change does not reset them to the
+// placeholder. Leave unset for a first deployment.
+param stagingImage = readEnvironmentVariable('STAGING_IMAGE', 'mcr.microsoft.com/k8se/quickstart:latest')
+param productionImage = readEnvironmentVariable('PRODUCTION_IMAGE', 'mcr.microsoft.com/k8se/quickstart:latest')

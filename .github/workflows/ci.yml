@@ -46,9 +46,9 @@ jobs:
       - run: uv python install 3.12
       - run: uv sync --locked
       - name: Format check
-        run: uv run ruff format --check .
+        run: uv run ruff format --check . ../deploy
       - name: Lint
-        run: uv run ruff check .
+        run: uv run ruff check . ../deploy
       - name: Type check
         run: uv run mypy
       - name: Unit and integration tests
@@ -185,6 +185,8 @@ jobs:
           az bicep build-params --file infra/main.bicepparam --stdout > /dev/null
       - name: Setup script is valid shell
         run: bash -n infra/bootstrap-azure.sh
+      - name: Lint the workflows
+        run: docker run --rm -v "$PWD":/repo -w /repo rhysd/actionlint:1.7.7 -color
 
   dependency-audit:
     runs-on: ubuntu-latest
