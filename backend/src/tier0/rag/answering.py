@@ -41,9 +41,11 @@ class Outcome(StrEnum):
 
 
 class Source(BaseModel):
-    document_id: str
+    document_id: str  # the knowledge-base article number
     title: str
     category: str
+    source: str = ""  # where the article came from (dataset or file)
+    score: float | None = None  # cosine similarity of the match, 0 to 1
 
 
 class AnswerResult(BaseModel):
@@ -109,7 +111,13 @@ class AnswerService:
         wanted = decision.sufficiency.supporting_ids or [passages[0].document_id]
         by_id = {h.document_id: h for h in passages}
         return [
-            Source(document_id=i, title=by_id[i].title, category=by_id[i].category)
+            Source(
+                document_id=i,
+                title=by_id[i].title,
+                category=by_id[i].category,
+                source=by_id[i].source,
+                score=round(by_id[i].score, 3),
+            )
             for i in wanted
             if i in by_id
         ]

@@ -40,6 +40,11 @@ export function MessageItem({ item }: { item: Item }) {
           {item.sources.map((source) => (
             <li key={source.document_id}>
               <span>{source.title}</span> <span className="category">{source.category}</span>
+              <span className="match-details">
+                KB article {source.document_id}
+                {source.source ? ` · Source: ${source.source}` : ""}
+                {typeof source.score === "number" ? ` · Relevance: ${source.score.toFixed(2)}` : ""}
+              </span>
             </li>
           ))}
         </ul>

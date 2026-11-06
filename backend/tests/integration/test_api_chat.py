@@ -89,10 +89,14 @@ def test_a_knowledge_answer_has_the_documented_shape(alice: TestClient) -> None:
     assert (
         body["intent"] == "knowledge" and body["pending_action"] is None and body["ticket"] is None
     )
-    assert body["sources"] == [
-        {"document_id": "onb-002", "title": "Documents to Bring on Your First Day",
-         "category": "Onboarding"}
-    ]  # fmt: skip
+    (source,) = body["sources"]
+    assert {k: source[k] for k in ("document_id", "title", "category", "source")} == {
+        "document_id": "onb-002",
+        "title": "Documents to Bring on Your First Day",
+        "category": "Onboarding",
+        "source": "BuzzTech New Hire Guide (synthetic)",
+    }
+    assert 0 <= source["score"] <= 1
 
 
 def test_the_whole_ticket_journey_over_http(alice: TestClient, harness: Harness) -> None:

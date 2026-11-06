@@ -26,7 +26,15 @@ describe("sending messages", () => {
         json(
           chatReply({
             reply: "Set it up from the self-service portal.",
-            sources: [{ document_id: "d1", title: "VPN Setup Guide", category: "IT Support" }],
+            sources: [
+              {
+                document_id: "d1",
+                title: "VPN Setup Guide",
+                category: "IT Support",
+                source: "helpdesk-kb",
+                score: 0.766,
+              },
+            ],
           }),
         ),
     });
@@ -38,6 +46,9 @@ describe("sending messages", () => {
     const sources = screen.getByRole("list", { name: "Sources" });
     expect(within(sources).getByText("VPN Setup Guide")).toBeVisible();
     expect(within(sources).getByText("IT Support")).toBeVisible();
+    expect(within(sources).getByText(/KB article d1/)).toHaveTextContent(
+      "KB article d1 · Source: helpdesk-kb · Relevance: 0.77",
+    );
     expect(screen.getByLabelText("Message")).toHaveValue("");
   });
 

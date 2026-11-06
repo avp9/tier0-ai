@@ -9,6 +9,8 @@ export interface Source {
   document_id: string;
   title: string;
   category: string;
+  source?: string;
+  score?: number | null;
 }
 
 export interface TicketPreview {
