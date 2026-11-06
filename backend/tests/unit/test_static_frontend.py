@@ -86,6 +86,19 @@ def test_the_favicon_and_other_top_level_files_are_served(build: Path) -> None:
     assert "immutable" not in response.headers["cache-control"]
 
 
+def test_only_files_present_at_start_up_can_be_served(build: Path) -> None:
+    c = client_for(build)
+    (build / "added-later.txt").write_text("late")
+    assert (
+        c.get("/added-later.txt").text == INDEX
+    )  # not on the start-up list: the app, not the file
+
+
+def test_the_page_itself_is_never_served_as_a_download(build: Path) -> None:
+    response = client_for(build).get("/index.html")
+    assert response.text == INDEX and "content-security-policy" in response.headers
+
+
 def test_files_in_subfolders_are_not_exposed(build: Path) -> None:
     assert client_for(build).get("/nested/inner.txt").text == INDEX  # the app, not the file
 

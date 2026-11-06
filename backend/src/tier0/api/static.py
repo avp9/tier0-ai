@@ -47,6 +47,11 @@ def mount_frontend(app: FastAPI, directory: Path) -> None:
     if (root / "assets").is_dir():
         app.mount("/assets", HashedAssets(directory=root / "assets"), name="assets")
 
+    # An allowlist, fixed at start-up: a request is served a file only if its text is exactly one
+    # of these names. No file path is ever built from what the browser sent.
+    top_level = {
+        entry.name: entry for entry in root.iterdir() if entry.is_file() and entry != index
+    }
     page_headers = {"Content-Security-Policy": CONTENT_SECURITY_POLICY, "Cache-Control": "no-cache"}
 
     @app.api_route(
@@ -55,14 +60,7 @@ def mount_frontend(app: FastAPI, directory: Path) -> None:
     def single_page_app(path: str) -> Any:
         if path == "api" or path.startswith("api/"):
             raise HTTPException(404, "Not Found")  # an unknown API route is never an HTML page
-        candidate = root / path
-        # Top-level files from the build (the favicon) only: never subdirectories or anything
-        # outside the folder.
-        if (
-            path
-            and candidate.is_file()
-            and candidate.resolve().parent == root
-            and candidate != index
-        ):
-            return FileResponse(candidate, headers={"Cache-Control": "public, max-age=3600"})
+        known_file = top_level.get(path)
+        if known_file is not None:
+            return FileResponse(known_file, headers={"Cache-Control": "public, max-age=3600"})
         return FileResponse(index, headers=page_headers)
