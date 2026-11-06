@@ -166,3 +166,39 @@ def evaluate_gap_separation(
     return SeparationReport(
         gap_scores=gap_scores, answerable_scores=[r.top_score for r in report.results]
     )
+
+
+@dataclass(frozen=True)
+class ThresholdSuggestion:
+    threshold: float
+    separable: bool
+    answerable_kept: float  # share of answerable questions at or above the threshold
+    gaps_rejected: float  # share of gap questions below the threshold
+
+
+def suggest_threshold(
+    answerable_scores: Sequence[float], gap_scores: Sequence[float]
+) -> ThresholdSuggestion:
+    """Pick the top-1 similarity cut-off that best splits answerable from gap questions."""
+    if not answerable_scores or not gap_scores:
+        raise ValueError("need both answerable and gap scores to suggest a threshold")
+
+    def shares(t: float) -> tuple[float, float]:
+        kept = sum(s >= t for s in answerable_scores) / len(answerable_scores)
+        rejected = sum(s < t for s in gap_scores) / len(gap_scores)
+        return kept, rejected
+
+    if max(gap_scores) < min(answerable_scores):
+        midpoint = (max(gap_scores) + min(answerable_scores)) / 2
+        kept, rejected = shares(midpoint)
+        return ThresholdSuggestion(midpoint, True, kept, rejected)
+
+    best = min(set(answerable_scores) | set(gap_scores))
+    best_balance = -1.0
+    for candidate in sorted(set(answerable_scores) | set(gap_scores)):
+        kept, rejected = shares(candidate)
+        balance = (kept + rejected) / 2
+        if balance > best_balance:
+            best, best_balance = candidate, balance
+    kept, rejected = shares(best)
+    return ThresholdSuggestion(best, False, kept, rejected)

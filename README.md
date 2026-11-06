@@ -30,3 +30,11 @@ uv run python scripts/inspect_retrieval.py --evaluate
 ```
 
 Both use the OpenAI embedder by default and need an index built with the same model. Add `--embedder fake` to use an index built with `build_index.py --embedder fake`; fake results only exercise the tooling and say nothing about real quality.
+
+## Asking a question
+
+```bash
+OPENAI_API_KEY=... uv run python scripts/ask.py "How many casual leave days do I get?"
+```
+
+Prints the reply and why the agent answered or declined. The agent answers only when two checks pass: the best retrieved passage scores at least `RETRIEVAL_SCORE_THRESHOLD`, and an LLM confirms the retrieved passages are enough to answer. Otherwise it says it has no reliable answer and offers to raise a support ticket. Answers always end with a `Sources:` line listing the titles of the passages used.
