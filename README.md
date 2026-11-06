@@ -159,3 +159,17 @@ docker compose down -v
 ```
 
 AT-04 and AT-09 are reinterpreted per ADR 0001: the requester's email always comes from the sign-in session, so the agent never asks for one. The fake "models" are deterministic rule-based stand-ins; they prove the wiring, not answer quality (that is the evaluation workflow, T22).
+
+## Production image
+
+`docker build --target prod --build-context index=<dir> --build-arg INDEX_HASH=<hash> -t tier0 .` builds the runtime image (Python 3.12 slim, non-root user `tier0`, UI and prebuilt knowledge-base index baked in). The index is built outside the image (`backend/scripts/build_index.py`, which needs `OPENAI_API_KEY`) so that no key ever enters an image layer; building without an index or its `INDEX_HASH` fails on purpose, even when layers are cached (the hash is also stored as the image label `tier0.index-hash`). All settings come from environment variables at run time (see `.env.example`); outside `local`/`e2e` the server refuses to start if any are missing.
+
+Measured on an arm64 laptop with the full 20,935-record knowledge base (indexed with the fake embedder, so the index is a stand-in for the real one, which will be larger):
+
+| Measure | Result |
+|---|---|
+| Image size | 1.21 GB (venv 598 MB, index 145 MB) |
+| Cold start to a healthy `/api/health` | 1.5 to 2.3 s (3 runs, Postgres already running) |
+| Memory after start | about 190 MB |
+
+The largest dependency is the `kubernetes` client (119 MB), pulled in by `chromadb` and unused here; trimming it is a possible later optimisation, left alone because removing files from a dependency risks breaking it.
