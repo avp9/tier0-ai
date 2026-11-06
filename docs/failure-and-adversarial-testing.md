@@ -18,7 +18,7 @@ What was attacked or broken on purpose, what that found, and what is still open.
 ## Checked and found sound (now guarded by tests)
 
 - Hostile text in the question, a knowledge-base passage or model output: passages cannot close their own tag; the model cannot cite documents it was not given; invalid categories and priorities are rejected; control characters are stripped and lengths bounded in drafted tickets; an unparseable model verdict means "no answer", never a guess.
-- Confirmation: 30 tricky replies ("yes?", "yes but change the title", "not yes", lookalike letters, newlines with instructions, mixtures such as "yes no") are never a yes, and mixtures are exactly "unclear".
+- Confirmation: 24 tricky replies ("yes?", "yes but change the title", "not yes", lookalike letters, newlines with instructions, mixtures such as "yes no") are never a yes, and six mixed answers are exactly "unclear".
 - NUL bytes, control characters, RTL and zero-width text, SQL-looking text, 2,000 and 2,001 character messages, malformed thread IDs and wrong JSON shapes all give clean responses and conversations that save and reload.
 - Eight simultaneous confirmations of the same ticket create one ticket, and two messages on one conversation never run at the same time.
 - A database outage returns a generic error with an `X-Request-ID` and no driver or stack details; `/api/ready` reports 503.
