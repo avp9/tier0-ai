@@ -108,6 +108,7 @@ Target: Azure Container Apps (staging and production) plus PostgreSQL B1ms, abou
 |---|---|
 | [Architecture](docs/architecture.md) | Diagrams of the system, the conversation graph, the ticket flow and the delivery pipeline |
 | [Design decisions](docs/design-decisions.md) | Where and why this departs from the specification, with the ADRs |
+| [First real-world run](docs/first-real-run.md) | The ordered checklist for replacing the fakes with real keys, Jira and Azure |
 | [Demo script](docs/demo-script.md) | A 10-minute walkthrough of the three flows, with screenshots |
 | [Component reference](docs/reference.md) | Commands and behaviour for each part |
 | [Evaluation report](docs/evaluation-report.md), [Observability](docs/observability.md), [Failure testing](docs/failure-and-adversarial-testing.md), [Azure setup](docs/azure-setup.md), [Rollback](docs/rollback.md) | |
