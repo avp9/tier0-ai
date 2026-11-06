@@ -38,3 +38,15 @@ OPENAI_API_KEY=... uv run python scripts/ask.py "How many casual leave days do I
 ```
 
 Prints the reply and why the agent answered or declined. The agent answers only when two checks pass: the best retrieved passage scores at least `RETRIEVAL_SCORE_THRESHOLD`, and an LLM confirms the retrieved passages are enough to answer. Otherwise it says it has no reliable answer and offers to raise a support ticket. Answers always end with a `Sources:` line listing the titles of the passages used.
+
+## Checking the Jira integration
+
+```bash
+# Read-only: list the tickets of one requester in this environment
+JIRA_SERVER=https://you.atlassian.net JIRA_USERNAME=you@example.com JIRA_API_TOKEN=... \
+APP_ENV=staging uv run python scripts/jira_smoke.py alice@buzztech.example
+# Also create one clearly labelled test ticket and read it back
+... uv run python scripts/jira_smoke.py alice@buzztech.example --create
+```
+
+Every ticket carries a `tier0-env:<APP_ENV>` label and lookups only return tickets with the signed-in requester's email and the current environment's label, so staging and production never see each other's tickets.
