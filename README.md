@@ -129,3 +129,20 @@ Sessions are signed, `HttpOnly`, `SameSite=Lax` cookies (also `Secure` unless `A
 The employee is always the signed-in one; nothing in the request body can change who a ticket is for. Buttons in the UI simply send `yes`, `no` or a ticket key as ordinary messages. Messages are limited to 2000 characters and 20 per minute per employee.
 
 Chat needs `OPENAI_API_KEY`, `JIRA_SERVER`, `JIRA_USERNAME`, `JIRA_API_TOKEN` and a built knowledge index (see "Building the knowledge-base index"). Without them a local server still starts (chat answers `503`), but a server with `APP_ENV` other than `local` exits at start-up and names what is missing. `/api/ready` also checks that the index is readable.
+
+## Web app (frontend)
+
+React + TypeScript + Vite in `frontend/`. Needs Node 22 or newer.
+
+```bash
+cd frontend
+npm ci
+npm run dev        # http://localhost:5173, forwards /api to the API on port 8000
+npm test           # component tests (Vitest)
+npm run lint && npm run typecheck
+npm run build      # produces frontend/dist
+```
+
+To serve the built app from the API (one origin, one process), set `STATIC_DIR=../frontend/dist` before starting the API. The server then returns the app for every non-API path, with a strict Content-Security-Policy (no inline script or style), long-lived caching for the hashed assets and `no-cache` for the page itself. A server that is not running locally refuses to start if `STATIC_DIR` has no build in it.
+
+What the UI does: sign in; ask a question and see the answer with its sources as a list; accept or decline a ticket offer with buttons; review a ticket card with **Create ticket** / **Cancel** (the ticket is only created by the employee's own click); pick one of several tickets from a list; reload the page and carry on (the conversation id lives in this tab's session storage; nothing else is stored). Replies are always shown as plain text, so markup in a reply or a source title is displayed, never run, and a ticket link is only shown if its address is http(s).

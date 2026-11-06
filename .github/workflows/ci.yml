@@ -54,6 +54,36 @@ jobs:
       - name: Unit and integration tests
         run: uv run pytest -q
 
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Type check
+        run: npm run typecheck
+      - name: Tests
+        run: npm test
+      - name: Production build
+        run: npm run build
+      # Anything that ships to browsers must be clean at every severity. Dev tools only fail the
+      # build at high severity: the one known finding is a moderate denial-of-service in a lint
+      # tool that only ever reads this repository's own files.
+      - name: Audit shipped dependencies
+        run: npm audit --omit=dev --audit-level=low
+      - name: Audit development tools
+        run: npm audit --audit-level=high
+
   dependency-audit:
     runs-on: ubuntu-latest
     timeout-minutes: 10

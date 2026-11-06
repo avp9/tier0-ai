@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     session_max_age_hours: int = Field(default=8, ge=1, le=72)
     demo_users: list[DemoUser] = Field(default_factory=list)
     run_migrations_on_start: bool = True
+    static_dir: str | None = None  # the built web app (frontend/dist) to serve, if any
     login_max_failures_per_email: int = Field(default=5, ge=1)
     login_max_failures_per_ip: int = Field(default=20, ge=1)
     login_window_minutes: int = Field(default=15, ge=1)
