@@ -59,3 +59,14 @@ TYPESAFE_API_KEY=... OPENAI_API_KEY=... \
 ```
 
 Each message is classified into an intent (knowledge question, create ticket, ticket status, small talk, out of scope, ambiguous), a domain (IT, HR, other) and whether it continues the earlier topic. JEV (`typesafe_sdk`, 10 s timeout, 2 retries) is tried first; if it fails or returns something unusable, OpenAI is used. The result says which provider answered. If both fail the caller gets `IntentUnavailable` and should ask the employee to retry.
+
+## Database and conversation state
+
+Conversation state is stored in PostgreSQL through LangGraph's `PostgresSaver`, so a conversation survives restarts. Schema changes are Alembic migrations that ship inside the package:
+
+```bash
+DATABASE_URL=postgresql://user:password@localhost:5432/tier0 \
+  uv run python -c "from tier0.db.migrate import upgrade_to_head; import os; upgrade_to_head(os.environ['DATABASE_URL'])"
+```
+
+To run the database tests locally, point `TIER0_TEST_DATABASE_URL` at any Postgres you can create databases in (each test creates and drops its own database). Without it those tests are skipped; CI always runs them.

@@ -37,8 +37,8 @@ Each item is one PR. Pick the highest-priority item whose dependencies are **Don
 
 | ID | Branch | Item | Acceptance criteria | Depends on | Status |
 |---|---|---|---|---|---|
-| T13 | `feat/intent-classification` | Intent types, JEV client and OpenAI fallback | `intent.py` defines the intent enum and result types. JEV is called through `typesafe_sdk` with a timeout and 2 retries on transient errors, then falls back to OpenAI structured output. Malformed output is validated and recovered from. Unit tests use fakes for both providers. Covers AT-14. | T01 | In review |
-| T14a | `feat/agent-state-postgres` | Typed state and `PostgresSaver` | Typed `AgentState` with explicit workflow status values. `PostgresSaver` is wired up, with Alembic migrations for `users` and `ticket_submissions`. Integration test against a Postgres service container in CI. | T02 | Todo |
+| T13 | `feat/intent-classification` | Intent types, JEV client and OpenAI fallback | `intent.py` defines the intent enum and result types. JEV is called through `typesafe_sdk` with a timeout and 2 retries on transient errors, then falls back to OpenAI structured output. Malformed output is validated and recovered from. Unit tests use fakes for both providers. Covers AT-14. | T01 | Done |
+| T14a | `feat/agent-state-postgres` | Typed state and `PostgresSaver` | Typed `AgentState` with explicit workflow status values. `PostgresSaver` is wired up, with Alembic migrations for `users` and `ticket_submissions`. Integration test against a Postgres service container in CI. | T02 | In review |
 | T14b | `feat/agent-graph` | Connect all flows | The graph routes knowledge, create-ticket, status, small talk, out-of-scope and ambiguous intents. Topic context is kept across turns. Multi-turn integration tests cover all three primary flows with fakes, plus AT-15, AT-16 and AT-17. | T09, T11, T12, T13, T14a | Todo |
 
 ## M4 — Application
