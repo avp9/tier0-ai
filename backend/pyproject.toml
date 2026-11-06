@@ -38,6 +38,7 @@ packages = ["src/tier0"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["tests"]
 
 [tool.ruff]
 line-length = 100
@@ -51,4 +52,5 @@ select = ["E", "F", "I", "B", "UP", "S"]
 
 [tool.mypy]
 strict = true
+mypy_path = "tests"
 files = ["src", "tests"]

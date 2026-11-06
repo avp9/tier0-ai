@@ -1,27 +1,45 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from functools import partial
 
 from fastapi import FastAPI, Request, Response
+from fastapi.responses import JSONResponse
 from psycopg_pool import ConnectionPool
 
 from tier0.agent.checkpoint import make_pool
+from tier0.agent.factory import ChatNotConfigured, build_agent_from_settings
+from tier0.agent.service import AgentService
 from tier0.api.routes_auth import router as auth_router
+from tier0.api.routes_chat import router as chat_router
 from tier0.api.routes_health import database_check, migrations_check
 from tier0.api.routes_health import router as health_router
-from tier0.auth.ratelimit import LoginRateLimiter
+from tier0.auth.ratelimit import LoginRateLimiter, SlidingWindowLimiter
 from tier0.auth.sessions import SessionCodec
 from tier0.auth.users import UserStore, seed_demo_users
 from tier0.config import Settings
 from tier0.db.migrate import upgrade_with_lock
+from tier0.rag.indexer import IndexNotFoundError
+from tier0.rag.retriever import IndexMismatchError
+
+log = logging.getLogger(__name__)
 
 HSTS = "max-age=31536000; includeSubDomains"
 
 
-def create_app(settings: Settings, *, pool: ConnectionPool | None = None) -> FastAPI:
-    """Build the web application. Pass ``pool`` to share one (the caller then closes it)."""
+def create_app(
+    settings: Settings,
+    *,
+    pool: ConnectionPool | None = None,
+    agent: AgentService | None = None,
+) -> FastAPI:
+    """Build the web application.
+
+    Pass ``pool`` to share one (the caller then closes it) and ``agent`` to use a ready-made
+    agent instead of building the real one from the settings.
+    """
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -43,10 +61,17 @@ def create_app(settings: Settings, *, pool: ConnectionPool | None = None) -> Fas
                 settings.login_max_failures_per_ip,
                 settings.login_window_minutes * 60,
             )
-            app.state.readiness_checks = {
+            app.state.chat_limiter = SlidingWindowLimiter(settings.chat_messages_per_minute, 60)
+            checks: dict[str, Callable[[], bool]] = {
                 "database": partial(database_check, active),
                 "migrations": partial(migrations_check, active),
             }
+            app.state.agent = agent
+            if agent is None:
+                app.state.agent, index_check = _build_agent(settings, active)
+                if index_check is not None:
+                    checks["knowledge_index"] = index_check
+            app.state.readiness_checks = checks
             yield
         finally:
             if own_pool:
@@ -69,9 +94,29 @@ def create_app(settings: Settings, *, pool: ConnectionPool | None = None) -> Fas
             response.headers["Strict-Transport-Security"] = HSTS
         return response
 
+    @app.exception_handler(Exception)
+    async def unexpected_error(request: Request, error: Exception) -> JSONResponse:
+        log.exception("unhandled error on %s %s", request.method, request.url.path)
+        return JSONResponse({"detail": "Something went wrong. Please try again."}, status_code=500)
+
     app.include_router(health_router)
     app.include_router(auth_router)
+    app.include_router(chat_router)
     return app
+
+
+def _build_agent(
+    settings: Settings, pool: ConnectionPool
+) -> tuple[AgentService | None, Callable[[], bool] | None]:
+    """Build the real agent. Outside local development a misconfigured server refuses to start."""
+    try:
+        built = build_agent_from_settings(settings, pool)
+    except (ChatNotConfigured, IndexNotFoundError, IndexMismatchError) as error:
+        if not settings.is_local:
+            raise
+        log.warning("chat is disabled for local development: %s", error)
+        return None, None
+    return built.service, built.index_check
 
 
 def create_app_from_env() -> FastAPI:

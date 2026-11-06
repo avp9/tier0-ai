@@ -3,12 +3,13 @@ import re
 import threading
 import time
 from collections.abc import Iterator
-from typing import Any
+from typing import Any, cast
 
 import psycopg
 import pytest
 from fastapi.testclient import TestClient
 
+from tier0.agent.service import AgentService
 from tier0.api.app import create_app
 from tier0.auth import passwords
 from tier0.auth.sessions import COOKIE_NAME, SessionCodec
@@ -122,7 +123,8 @@ def test_a_successful_login_sets_a_locked_down_session_cookie(client: TestClient
 def test_outside_local_development_the_cookie_is_secure_and_hsts_is_sent(
     migrated_database: str,
 ) -> None:
-    app = create_app(make_settings(migrated_database, app_env="production"))
+    stand_in = cast(AgentService, object())  # this test is about cookies, not chat
+    app = create_app(make_settings(migrated_database, app_env="production"), agent=stand_in)
     with TestClient(app) as c:
         response = login(c)
         assert "secure" in response.headers["set-cookie"].lower()

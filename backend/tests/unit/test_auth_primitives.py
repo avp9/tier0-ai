@@ -211,3 +211,32 @@ def test_old_records_are_pruned_so_memory_stays_bounded(monkeypatch: pytest.Monk
     for n in range(40, 60):
         rl.record_failure(f"u{n}@b.co", f"10.0.1.{n}")
     assert len(rl._failures) < 100
+
+
+# --- the chat allowance ---------------------------------------------------------------
+
+
+def test_a_sliding_window_counts_every_call_and_reports_the_wait() -> None:
+    from tier0.auth.ratelimit import SlidingWindowLimiter
+
+    clock = Clock()
+    limit = SlidingWindowLimiter(max_events=3, window_seconds=60, clock=clock)
+    assert [limit.hit("u") for _ in range(3)] == [None, None, None]
+    assert limit.hit("u") == 60  # the blocked attempt itself is not counted
+    clock.now += 30
+    assert limit.hit("u") == 30
+    assert limit.hit("other") is None  # keys are independent
+    clock.now += 31
+    assert limit.hit("u") is None  # the oldest events have aged out
+
+
+def test_blocked_attempts_do_not_extend_the_wait() -> None:
+    from tier0.auth.ratelimit import SlidingWindowLimiter
+
+    clock = Clock()
+    limit = SlidingWindowLimiter(max_events=1, window_seconds=10, clock=clock)
+    limit.hit("u")
+    for _ in range(50):
+        limit.hit("u")  # hammering while blocked
+    clock.now += 10
+    assert limit.hit("u") is None

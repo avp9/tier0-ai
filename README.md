@@ -118,3 +118,14 @@ On start the app migrates the database (safe if several servers start together) 
 | `GET /api/auth/me` | The signed-in employee, or `401`. |
 
 Sessions are signed, `HttpOnly`, `SameSite=Lax` cookies (also `Secure` unless `APP_ENV=local`) that expire after `SESSION_MAX_AGE_HOURS`. Logout clears the browser's cookie, but a copied cookie stays valid until it expires or the user is removed, which is why sessions are short. API docs at `/docs` are served only when `APP_ENV=local`.
+
+## Chat API
+
+| Endpoint | Purpose |
+|---|---|
+| `POST /api/chat` | `{thread_id?, message}` -> reply, intent, sources, `pending_action` (what the agent is waiting for), and `ticket` once one is created. Omit `thread_id` to start a conversation. |
+| `GET /api/chat/{thread_id}` | The conversation so far and any open question, for a thread you own (otherwise `404`). |
+
+The employee is always the signed-in one; nothing in the request body can change who a ticket is for. Buttons in the UI simply send `yes`, `no` or a ticket key as ordinary messages. Messages are limited to 2000 characters and 20 per minute per employee.
+
+Chat needs `OPENAI_API_KEY`, `JIRA_SERVER`, `JIRA_USERNAME`, `JIRA_API_TOKEN` and a built knowledge index (see "Building the knowledge-base index"). Without them a local server still starts (chat answers `503`), but a server with `APP_ENV` other than `local` exits at start-up and names what is missing. `/api/ready` also checks that the index is readable.
