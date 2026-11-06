@@ -46,8 +46,8 @@ Each item is one PR. Pick the highest-priority item whose dependencies are **Don
 | ID | Branch | Item | Acceptance criteria | Depends on | Status |
 |---|---|---|---|---|---|
 | T15 | `feat/api-auth` | FastAPI app, demo users and sessions | Demo users are created from the `DEMO_USERS` secret with argon2 hashes. Login, logout and me endpoints. Signed HttpOnly session cookie. Login is rate-limited. `/api/health` and `/api/ready` endpoints. | T14a | Done |
-| T16 | `feat/chat-api` | `/api/chat` endpoints | Contracts match PROJECT_PLAN §5. The Requester Email always comes from the session. Threads are scoped to their owner, and other users' threads return 404. API tests with fakes. | T14b, T15 | In review |
-| T17 | `feat/react-chat-ui` | React login and chat UI | Login page and chat view with sources, a Ticket preview card with Confirm/Cancel, and a ticket selection list. Accessible (labels, keyboard, contrast). FastAPI serves the built app. Vitest component tests. | T16 | Todo |
+| T16 | `feat/chat-api` | `/api/chat` endpoints | Contracts match PROJECT_PLAN §5. The Requester Email always comes from the session. Threads are scoped to their owner, and other users' threads return 404. API tests with fakes. | T14b, T15 | Done |
+| T17 | `feat/react-chat-ui` | React login and chat UI | Login page and chat view with sources, a Ticket preview card with Confirm/Cancel, and a ticket selection list. Accessible (labels, keyboard, contrast). FastAPI serves the built app. Vitest component tests. | T16 | In review |
 | T18 | `test/playwright-e2e` | Docker Compose stack and Playwright in CI | `docker compose up` starts the app and Postgres with fake providers and the fixture index. Playwright covers login and AT-01 to AT-18 (with AT-04 and AT-09 reinterpreted per ADR 0001). Added as a required CI check. | T17 | Todo |
 
 ## M5 — Azure delivery

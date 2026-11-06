@@ -4,6 +4,7 @@ import logging
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from functools import partial
+from pathlib import Path
 
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
@@ -16,6 +17,7 @@ from tier0.api.routes_auth import router as auth_router
 from tier0.api.routes_chat import router as chat_router
 from tier0.api.routes_health import database_check, migrations_check
 from tier0.api.routes_health import router as health_router
+from tier0.api.static import frontend_available, mount_frontend
 from tier0.auth.ratelimit import LoginRateLimiter, SlidingWindowLimiter
 from tier0.auth.sessions import SessionCodec
 from tier0.auth.users import UserStore, seed_demo_users
@@ -102,7 +104,20 @@ def create_app(
     app.include_router(health_router)
     app.include_router(auth_router)
     app.include_router(chat_router)
+    _serve_frontend(app, settings)  # last: its catch-all route must not shadow the API
     return app
+
+
+def _serve_frontend(app: FastAPI, settings: Settings) -> None:
+    if not settings.static_dir:
+        return
+    directory = Path(settings.static_dir)
+    if frontend_available(directory):
+        mount_frontend(app, directory)
+    elif settings.is_local:
+        log.warning("STATIC_DIR %s has no index.html; the web app is not served", directory)
+    else:
+        raise FileNotFoundError(f"STATIC_DIR {directory} has no index.html (was the app built?)")
 
 
 def _build_agent(
