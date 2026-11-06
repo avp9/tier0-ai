@@ -3,10 +3,13 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "test": "playwright test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "demo": "playwright test -c playwright.demo.config.ts"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",

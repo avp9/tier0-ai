@@ -6,8 +6,15 @@
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "skipLibCheck": true,
-    "types": ["node"],
+    "types": [
+      "node"
+    ],
     "noEmit": true
   },
-  "include": ["*.ts", "tests/**/*.ts", "support/**/*.ts"]
+  "include": [
+    "*.ts",
+    "tests/**/*.ts",
+    "support/**/*.ts",
+    "demo/**/*.ts"
+  ]
 }
