@@ -96,3 +96,25 @@ Each message is classified, then routed:
 | Small talk, out of scope, ambiguous | Fixed polite replies and a clarifying question; no model call, no action. |
 
 If the employee ignores an offer or a list and says something new, the new message is handled as a fresh request.
+
+## Running the web API
+
+```bash
+cd backend
+export DATABASE_URL=postgresql://user:password@localhost:5432/tier0
+export SESSION_SECRET=$(python3 -c "import secrets;print(secrets.token_urlsafe(48))")
+export DEMO_USERS='[{"email":"alice@buzztech.example","name":"Alice Demo","password":"a-demo-password-1"}]'
+uv run uvicorn --factory tier0.api.app:create_app_from_env --port 8000
+```
+
+On start the app migrates the database (safe if several servers start together) and creates any demo user that doesn't exist yet; it never changes an existing account, so changing a password in `DEMO_USERS` does not alter an existing user.
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /api/health` | The process is up (liveness). |
+| `GET /api/ready` | Database reachable and schema at this build's version, else `503`. |
+| `POST /api/auth/login` | `{email, password}` -> `204` and a session cookie, `401` (same message for a wrong password or an unknown account), or `429` after repeated failures. |
+| `POST /api/auth/logout` | Clears the cookie. |
+| `GET /api/auth/me` | The signed-in employee, or `401`. |
+
+Sessions are signed, `HttpOnly`, `SameSite=Lax` cookies (also `Secure` unless `APP_ENV=local`) that expire after `SESSION_MAX_AGE_HOURS`. Logout clears the browser's cookie, but a copied cookie stays valid until it expires or the user is removed, which is why sessions are short. API docs at `/docs` are served only when `APP_ENV=local`.
