@@ -12,9 +12,13 @@ test.beforeEach(async ({ page, controls: _controls }) => {
 const newChat = (page: Page) => page.getByRole("button", { name: "New chat" }).click();
 const lastAnswer = (page: Page) => conversation(page).locator(".bubble").last();
 
+/** Ask and wait for the whole reply: the typing indicator goes as soon as the first words stream
+ * in, so also wait for the half-written bubble (marked aria-live="off") to be replaced. */
 async function ask(page: Page, question: string) {
   await say(page, question);
+  await expect(conversation(page).locator('li[aria-live="off"]')).toHaveCount(0);
   await expect(page.getByRole("status").filter({ hasText: /typing/i })).toHaveCount(0);
+  await expect(conversation(page).locator("ol > li")).not.toHaveCount(0);
 }
 
 test("the first time a question is answered normally, with no note about the cache", async ({
@@ -28,13 +32,15 @@ test("the first time a question is answered normally, with no note about the cac
 test("asking the same question again is answered from the cache, with the same answer", async ({
   page,
 }) => {
+  const sources = page.getByRole("list", { name: "Sources" });
   await ask(page, QUESTION);
+  await expect(sources).toBeVisible(); // the sources arrive with the final reply, never mid-way
   const first = await lastAnswer(page).innerText();
   await newChat(page);
   await ask(page, QUESTION);
   await expect(conversation(page).getByText(NOTE)).toBeVisible();
+  await expect(sources).toBeVisible(); // sources came with it
   expect(await lastAnswer(page).innerText()).toBe(first);
-  await expect(page.getByRole("list", { name: "Sources" })).toBeVisible(); // sources came with it
 });
 
 test("capitals and punctuation do not make it a different question", async ({ page }) => {
