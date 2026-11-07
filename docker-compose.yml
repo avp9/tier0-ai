@@ -30,5 +30,5 @@ services:
       DATABASE_URL: postgresql://tier0:tier0-e2e-only@db:5432/tier0
       SESSION_SECRET: e2e-only-session-secret-not-for-real-use-0123456789
       DEMO_USERS: >-
-        [{"email":"alice@buzztech.example","name":"Alice Demo","password":"alice-demo-pass-1"},
-         {"email":"bob@buzztech.example","name":"Bob Demo","password":"bob-demo-pass-22"}]
+        [{"email":"alice@buzztech.example","name":"Alice Demo","password":"alice-demo-pass-1","gender":"female"},
+         {"email":"bob@buzztech.example","name":"Bob Demo","password":"bob-demo-pass-22","gender":"male"}]

@@ -12,12 +12,16 @@ from tier0.tickets.models import validate_email
 LOCAL_ENVS = frozenset({"local", "e2e"})
 
 
+Gender = Literal["male", "female"]
+
+
 class DemoUser(BaseModel):
     """A demo account created at start-up from the DEMO_USERS secret."""
 
     email: str
     name: str = Field(min_length=1, max_length=100)
     password: SecretStr = Field(min_length=12, max_length=256)
+    gender: Gender | None = None  # picks the avatar; unset shows a neutral one
 
     @field_validator("email")
     @classmethod

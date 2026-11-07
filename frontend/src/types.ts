@@ -64,4 +64,5 @@ export interface HistoryResponse {
 export interface Me {
   email: string;
   display_name: string;
+  gender?: "male" | "female" | null;
 }

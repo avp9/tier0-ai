@@ -48,7 +48,11 @@ export function pending(overrides: Partial<PendingAction> = {}): PendingAction {
   };
 }
 
-export const ME = { email: "alice@buzztech.example", display_name: "Alice Demo" };
+export const ME = {
+  email: "alice@buzztech.example",
+  display_name: "Alice Demo",
+  gender: "female" as const,
+};
 
 const encoder = new TextEncoder();
 export const sse = (name: string, data: unknown) =>

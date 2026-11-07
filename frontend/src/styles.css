@@ -198,6 +198,80 @@ label {
   padding: 0 12px;
 }
 
+.avatar-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.avatar {
+  display: inline-block;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--bubble-bot);
+  color: var(--muted);
+  padding: 0;
+  overflow: hidden;
+  cursor: default;
+}
+
+.who-am-i .avatar {
+  padding: 0; /* outranks ".who-am-i button" so the icon fills the circle */
+}
+
+.avatar svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.avatar-male {
+  color: #1d4ed8;
+}
+
+.avatar-female {
+  color: #be185d;
+}
+
+@media (prefers-color-scheme: dark) {
+  .avatar-male {
+    color: #8ab4ff;
+  }
+
+  .avatar-female {
+    color: #f9a8d4;
+  }
+}
+
+.avatar:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.avatar-tip {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 10;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.8125rem;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.15);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s;
+}
+
+.avatar-wrap:hover .avatar-tip,
+.avatar-wrap:focus-within .avatar-tip {
+  opacity: 1;
+}
+
 .chat main {
   display: flex;
   flex: 1;

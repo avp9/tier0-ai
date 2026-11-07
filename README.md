@@ -71,7 +71,7 @@ All settings are environment variables ([`.env.example`](.env.example) has a tem
 |---|---|---|
 | `DATABASE_URL` | yes | PostgreSQL connection string |
 | `SESSION_SECRET` | yes | At least 32 random characters; signs session cookies |
-| `DEMO_USERS` | yes, to sign in | JSON list of `{email, name, password}` (password at least 12 characters), created at start-up and stored hashed |
+| `DEMO_USERS` | yes, to sign in | JSON list of `{email, name, password, gender}` (password at least 12 characters; `gender` is optional, `"male"` or `"female"`, and picks the header icon, neutral if left out), created at start-up and stored hashed |
 | `APP_ENV` | | `local` (default), `e2e`, `staging` or `production`. Anything else than local/e2e uses secure cookies, hides API docs and fails fast on missing settings. Also becomes the Jira label `tier0-env:<APP_ENV>` |
 | `OPENAI_API_KEY`, `OPENAI_MODEL_NAME`, `EMBEDDING_MODEL` | with `LLM_PROVIDER=openai` | Answers and embeddings (defaults `gpt-4o-mini`, `text-embedding-3-small`) |
 | `TYPESAFE_API_KEY` | optional | Enables JEV intent classification; OpenAI is the fallback |
