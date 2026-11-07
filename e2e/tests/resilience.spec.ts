@@ -29,6 +29,9 @@ test("AT-14 a language model outage never invents an answer", async ({ page, con
 test("the conversation survives a page reload", async ({ page }) => {
   await say(page, "Unable to reset password via self-service portal");
   await expect(conversation(page)).toContainText("Here is what our knowledge base says");
+  // The reply shows while it streams in; the turn is only saved once it has finished, which is
+  // when its sources appear.
+  await expect(page.getByRole("list", { name: "Sources" })).toBeVisible();
   await page.reload();
   await expect(conversation(page)).toContainText("Unable to reset password via self-service portal");
   await expect(conversation(page)).toContainText("Here is what our knowledge base says");

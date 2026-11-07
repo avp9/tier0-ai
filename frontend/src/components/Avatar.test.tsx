@@ -31,6 +31,20 @@ describe("Avatar", () => {
     expect(screen.getByRole("button")).toHaveClass("avatar-neutral");
   });
 
+  it("draws a different figure for male, female and neutral", () => {
+    const figure = (gender: "male" | "female" | null) => {
+      const { container, unmount } = render(<Avatar me={{ ...alice, gender }} />);
+      const svg = container.querySelector("svg");
+      const drawing = svg?.innerHTML;
+      const kind = svg?.getAttribute("data-figure");
+      unmount();
+      return { kind, drawing };
+    };
+    const [male, female, neutral] = [figure("male"), figure("female"), figure(null)];
+    expect([male.kind, female.kind, neutral.kind]).toEqual(["male", "female", "neutral"]);
+    expect(new Set([male.drawing, female.drawing, neutral.drawing]).size).toBe(3);
+  });
+
   it("renders the email as text, never as markup", () => {
     render(<Avatar me={{ ...alice, email: "<b>x</b>@evil.example" }} />);
     expect(screen.getByRole("tooltip")).toHaveTextContent("<b>x</b>@evil.example");

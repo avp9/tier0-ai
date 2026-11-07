@@ -96,6 +96,9 @@ export function ChatPage({ me, onSignOut, onSessionExpired }: Props) {
       if (!message || busy) return;
       setBusy(true);
       setError(null);
+      // Clear the box now, not when the reply ends: the employee may already be typing the next
+      // message while this answer streams in, and it must not be wiped.
+      if (fromComposer) setDraft("");
       const sent = newItem("user", message);
       setItems((previous) => [...previous, sent]);
       try {
@@ -111,9 +114,10 @@ export function ChatPage({ me, onSignOut, onSessionExpired }: Props) {
           newItem("assistant", replyText(reply), { sources: reply.sources, ticket: reply.ticket }),
         ]);
         setPending(reply.pending_action);
-        if (fromComposer) setDraft("");
       } catch (failure) {
         setItems((previous) => previous.filter((item) => item.id !== sent.id));
+        // Give the unsent message back, ahead of anything typed since.
+        if (fromComposer) setDraft((typed) => (typed === "" ? message : `${message}\n${typed}`));
         if (failure instanceof ApiError && failure.status === 401) onSessionExpired();
         else setError(describe(failure));
       } finally {
