@@ -21,6 +21,17 @@ export interface TicketPreview {
   priority: "Low" | "Medium" | "High" | "Critical" | null;
 }
 
+/** The employee's changes to a ticket preview. Every field is sent, so it replaces the draft. */
+export interface TicketEdit {
+  title: string;
+  description: string;
+  category: "IT" | "HR";
+  priority: "Low" | "Medium" | "High" | "Critical" | null;
+}
+
+export const TITLE_MAX = 120;
+export const DESCRIPTION_MAX = 4000;
+
 export interface TicketOption {
   ticket_key: string;
   title: string;
@@ -37,6 +48,8 @@ export interface PendingAction {
   type: PendingType;
   prompt: string;
   preview: TicketPreview | null;
+  /** The preview can still be edited: nothing has been sent to the ticket system yet. */
+  editable?: boolean;
   options: TicketOption[];
 }
 

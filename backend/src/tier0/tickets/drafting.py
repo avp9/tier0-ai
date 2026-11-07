@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import re
 
-from pydantic import BaseModel, Field, ValidationError, field_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 from tier0.agent.state import PendingTicket
 from tier0.intent.prompts import recent_history
@@ -48,6 +48,47 @@ def clean(text: str, limit: int) -> str:
 def _clean_items(items: list[str]) -> list[str]:
     cleaned = [clean(item, ITEM_CHARS) for item in items]
     return [item for item in cleaned if item][:MAX_ITEMS]
+
+
+class TicketEdit(BaseModel):
+    """The employee's own changes to a ticket preview, before anything is sent.
+
+    All four fields are given every time (the form shows the whole ticket), so an edit replaces
+    the draft rather than patching it. The limits match what drafting produces.
+    """
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    title: str = Field(min_length=1, max_length=SUMMARY_CHARS)
+    description: str = Field(min_length=1, max_length=DESCRIPTION_CHARS)
+    category: Category
+    priority: Priority | None = None
+
+    @field_validator("title")
+    @classmethod
+    def _one_line(cls, value: str) -> str:
+        tidy = clean(value, SUMMARY_CHARS)
+        if not tidy:
+            raise ValueError("the title must not be blank")
+        return tidy
+
+    @field_validator("description")
+    @classmethod
+    def _keep_paragraphs(cls, value: str) -> str:
+        tidy = _CONTROL.sub(" ", value).strip()  # line breaks stay; other control characters go
+        if not tidy:
+            raise ValueError("the description must not be blank")
+        return tidy
+
+    def apply_to(self, ticket: PendingTicket) -> PendingTicket:
+        return ticket.model_copy(
+            update={
+                "summary": self.title,
+                "description": self.description,
+                "category": self.category,
+                "priority": self.priority,
+            }
+        )
 
 
 class DraftUpdate(BaseModel):

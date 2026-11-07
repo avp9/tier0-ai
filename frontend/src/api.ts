@@ -1,4 +1,4 @@
-import type { ChatResponse, Conversation, HistoryResponse, Me } from "./types";
+import type { ChatResponse, Conversation, HistoryResponse, Me, TicketEdit } from "./types";
 
 export const MAX_MESSAGE_CHARS = 2000;
 
@@ -127,13 +127,14 @@ async function readReplyStream(
  * (an older server, a proxy that buffers) is read as the ordinary single JSON reply.
  */
 async function sendChat(
-  message: string,
+  turn: { message: string } | { ticket_edit: TicketEdit },
   threadId: string | null,
   onToken: (text: string) => void,
 ): Promise<ChatResponse> {
+  const body = threadId ? { ...turn, thread_id: threadId } : turn;
   const response = await send(
     "/api/chat",
-    { method: "POST", body: JSON.stringify(threadId ? { message, thread_id: threadId } : { message }) },
+    { method: "POST", body: JSON.stringify(body) },
     "text/event-stream, application/json",
   );
   if (!response.ok) throw await failure(response);
@@ -157,7 +158,10 @@ export const api = {
     message: string,
     threadId: string | null,
     onToken: (text: string) => void = () => {},
-  ) => sendChat(message, threadId, onToken),
+  ) => sendChat({ message }, threadId, onToken),
+  /** Replace the ticket preview's contents with the employee's edits (nothing is sent yet). */
+  editTicket: (ticketEdit: TicketEdit, threadId: string) =>
+    sendChat({ ticket_edit: ticketEdit }, threadId, () => {}),
   conversations: () => request<Conversation[]>("/api/conversations"),
   history: (threadId: string) => request<HistoryResponse>(`/api/chat/${encodeURIComponent(threadId)}`),
 };

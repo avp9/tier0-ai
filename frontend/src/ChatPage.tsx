@@ -6,7 +6,15 @@ import { PendingActionPanel, hasControls } from "./components/PendingActionPanel
 import { Sidebar } from "./components/Sidebar";
 import { promptText, replyText } from "./format";
 import { threadStore } from "./threadStore";
-import type { ChatResponse, Conversation, HistoryResponse, Me, Message, PendingAction } from "./types";
+import type {
+  ChatResponse,
+  Conversation,
+  HistoryResponse,
+  Me,
+  Message,
+  PendingAction,
+  TicketEdit,
+} from "./types";
 
 interface Props {
   me: Me;
@@ -33,6 +41,9 @@ function describe(error: unknown): string {
   }
   return "Something went wrong. Please try again.";
 }
+
+/** What the conversation records for an edit made in the form (the server keeps the same words). */
+const EDITED_TEXT = "I edited the ticket.";
 
 /** Below this width the history opens over the chat instead of beside it. */
 const NARROW_PX = 900;
@@ -116,10 +127,11 @@ export function ChatPage({ me, onSignOut, onSessionExpired }: Props) {
     else composerRef.current?.focus();
   }, [pending, busy, restoring]);
 
+  /** Send one turn: a typed message, or (with ``edit``) the employee's changes to the ticket. */
   const send = useCallback(
-    async (text: string, fromComposer: boolean) => {
+    async (text: string, fromComposer: boolean, edit?: TicketEdit): Promise<boolean> => {
       const message = text.trim();
-      if (!message || busy) return;
+      if (!message || busy) return false;
       setBusy(true);
       setError(null);
       // Clear the box now, not when the reply ends: the employee may already be typing the next
@@ -129,10 +141,13 @@ export function ChatPage({ me, onSignOut, onSessionExpired }: Props) {
       setItems((previous) => [...previous, sent]);
       try {
         let written = "";
-        const reply: ChatResponse = await api.sendMessage(message, threadId, (piece) => {
-          written += piece;
-          setLive(written);
-        });
+        const reply: ChatResponse =
+          edit && threadId
+            ? await api.editTicket(edit, threadId)
+            : await api.sendMessage(message, threadId, (piece) => {
+                written += piece;
+                setLive(written);
+              });
         threadStore.set(reply.thread_id);
         setThreadId(reply.thread_id);
         setItems((previous) => [
@@ -141,18 +156,24 @@ export function ChatPage({ me, onSignOut, onSessionExpired }: Props) {
         ]);
         setPending(reply.pending_action);
         refreshConversations();
+        return true;
       } catch (failure) {
         setItems((previous) => previous.filter((item) => item.id !== sent.id));
         // Give the unsent message back, ahead of anything typed since.
         if (fromComposer) setDraft((typed) => (typed === "" ? message : `${message}\n${typed}`));
         if (failure instanceof ApiError && failure.status === 401) onSessionExpired();
         else setError(describe(failure));
+        if (edit && threadId && failure instanceof ApiError && failure.status === 409) {
+          // The ticket moved on (it was sent, or the question changed): show what is true now.
+          void api.history(threadId).then(showHistory, () => undefined);
+        }
+        return false;
       } finally {
         setLive(null);
         setBusy(false);
       }
     },
-    [busy, threadId, onSessionExpired, refreshConversations],
+    [busy, threadId, onSessionExpired, refreshConversations, showHistory],
   );
 
   function submit(event: FormEvent) {
@@ -251,10 +272,14 @@ export function ChatPage({ me, onSignOut, onSessionExpired }: Props) {
             {restoring && <p role="status">Restoring your conversation…</p>}
             <ol>
               {items.map((item) => (
-                <MessageItem key={item.id} item={item} />
+                <MessageItem key={item.id} item={item} gender={me.gender} />
               ))}
               {live !== null && (
-                <MessageItem item={{ id: 0, role: "assistant", text: live, sources: [], ticket: null }} live />
+                <MessageItem
+                  item={{ id: 0, role: "assistant", text: live, sources: [], ticket: null }}
+                  gender={me.gender}
+                  live
+                />
               )}
             </ol>
             {busy && live === null && (
@@ -276,7 +301,13 @@ export function ChatPage({ me, onSignOut, onSessionExpired }: Props) {
             </p>
           )}
 
-          <PendingActionPanel action={pending} busy={busy} onChoose={(m) => void send(m, false)} panelRef={panelRef} />
+          <PendingActionPanel
+            action={pending}
+            busy={busy}
+            onChoose={(m) => void send(m, false)}
+            onEdit={(edit) => send(EDITED_TEXT, false, edit)}
+            panelRef={panelRef}
+          />
 
           <form onSubmit={submit} className="composer">
             <label htmlFor="message" className="visually-hidden">
