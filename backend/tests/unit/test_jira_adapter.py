@@ -13,7 +13,7 @@ from tier0.tickets.errors import (
     TicketRejected,
     TicketServiceUnavailable,
 )
-from tier0.tickets.jira_adapter import JiraAdapter, classify_error
+from tier0.tickets.jira_adapter import JiraAdapter, classify_error, default_client_factory
 from tier0.tickets.models import TicketDraft
 
 CONFIG = JiraConfig(
@@ -101,6 +101,22 @@ def test_the_client_is_created_lazily_and_once() -> None:
     adapter.find_tickets(EMAIL)
     adapter.find_tickets(EMAIL)
     assert len(created) == 1
+
+
+def test_an_atlassian_cloud_site_is_marked_cloud_so_search_uses_the_current_endpoint() -> None:
+    # Without this the library calls the removed search endpoint and Jira answers HTTP 410.
+    client = default_client_factory(CONFIG)
+    assert client.deploymentType == "Cloud"  # type: ignore[attr-defined]
+
+
+def test_a_self_hosted_server_is_not_marked_cloud() -> None:
+    config = JiraConfig(
+        server="https://jira.internal.example",
+        username="bot@x.com",
+        api_token="secret-token",  # noqa: S106
+        environment="staging",
+    )
+    assert default_client_factory(config).deploymentType is None  # type: ignore[attr-defined]
 
 
 def test_config_requires_credentials_and_names_whats_missing() -> None:
