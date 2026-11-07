@@ -237,12 +237,26 @@ export function PendingActionPanel({ action, busy, onChoose, onEdit, panelRef }:
   if (action.type === "select_ticket") {
     return (
       <section ref={panelRef} className="card" aria-labelledby="pick-title">
-        <h2 id="pick-title">Choose a ticket</h2>
+        <div className="card-head">
+          <h2 id="pick-title">Choose a ticket</h2>
+          <button
+            type="button"
+            className="icon-button"
+            aria-label="Close ticket list"
+            disabled={busy}
+            onClick={() => onChoose("done")}
+          >
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+              <path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
         <ul className="ticket-options">
           {action.options.map((option) => (
             <li key={option.ticket_key}>
               <button
                 type="button"
+                data-choice={option.ticket_key}
                 disabled={busy}
                 onClick={() => onChoose(option.ticket_key)}
               >
@@ -253,6 +267,12 @@ export function PendingActionPanel({ action, busy, onChoose, onEdit, panelRef }:
             </li>
           ))}
         </ul>
+        {/* The list stays after a ticket is shown, so there is a way out of it. */}
+        <div className="actions list-actions">
+          <button type="button" disabled={busy} onClick={() => onChoose("done")}>
+            Done
+          </button>
+        </div>
       </section>
     );
   }

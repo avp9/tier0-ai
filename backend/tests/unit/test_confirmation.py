@@ -1,6 +1,6 @@
 import pytest
 
-from tier0.tickets.confirmation import Reply, interpret
+from tier0.tickets.confirmation import Reply, interpret, wants_to_finish
 
 
 @pytest.mark.parametrize(
@@ -67,3 +67,21 @@ def test_text_that_only_contains_a_yes_word_is_not_enough() -> None:
 def test_a_lone_filler_word_means_nothing() -> None:
     assert interpret("please") is Reply.UNCLEAR
     assert interpret("thank you") is Reply.UNCLEAR
+
+
+@pytest.mark.parametrize(
+    "text",
+    ["done", "Done!", "I'm done", "im done.", "that's all", "that is all", "no more",
+     "nothing else", "finished", "all done", "that's it", "No, that's all"],
+)  # fmt: skip
+def test_a_plain_i_am_done_ends_the_ticket_list(text: str) -> None:
+    assert wants_to_finish(text)
+
+
+@pytest.mark.parametrize(
+    "text",
+    ["", "   ", "am I done?", "SUP-3", "the second one", "show me more", "done with what?",
+     "yes", "I am not done", "not done yet"],
+)  # fmt: skip
+def test_anything_else_is_not_taken_as_being_done(text: str) -> None:
+    assert not wants_to_finish(text)

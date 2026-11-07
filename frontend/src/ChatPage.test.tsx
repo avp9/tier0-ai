@@ -383,7 +383,7 @@ describe("choosing among tickets", () => {
     const list = await screen.findByRole("region", { name: "Choose a ticket" });
     // The accessible name is the visible text, so voice control can say what it sees.
     const second = within(list).getByRole("button", { name: "SUP-7 Laptop slow In Progress" });
-    expect(within(list).getAllByRole("button")).toHaveLength(2);
+    expect(within(list).getAllByRole("button")).toHaveLength(4); // two tickets, Done and Close
     expect(within(conversation()).getByText("You have 2 tickets. Choose the one you want to see.")).toBeVisible();
     expect(screen.queryByText("You have 2 tickets.")).not.toBeInTheDocument(); // not the long list
     await user.click(second);
@@ -1211,6 +1211,10 @@ describe("waiting for the employee's choice", () => {
     priority: null,
   };
   const box = () => screen.getByLabelText("Message");
+  const hintFor = (name: string) =>
+    name === "a choice of ticket"
+      ? "Pick another ticket above, or press Done to ask something else."
+      : "Please answer the question above to continue.";
 
   const waiting = {
     "an offer to raise a ticket": () => pending(),
@@ -1228,7 +1232,7 @@ describe("waiting for the employee's choice", () => {
     await say(user, "something");
     await waitFor(() => expect(box()).toBeDisabled());
     expect(box()).toHaveAttribute("placeholder", "Choose an option above to continue");
-    expect(screen.getByText("Please answer the question above to continue.")).toBeVisible();
+    expect(screen.getByText(hintFor(_name))).toBeVisible();
     expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
     expect(box().closest("form")).toHaveClass("locked");
   });
@@ -1300,5 +1304,155 @@ describe("waiting for the employee's choice", () => {
     await waitFor(() => expect(box()).toBeDisabled());
     await user.click(screen.getByRole("button", { name: "New chat" }));
     expect(box()).toBeEnabled();
+  });
+});
+
+describe("looking through several tickets", () => {
+  const tickets = [
+    { ticket_key: "SUP-12", title: "Printer offline", status: "Open" },
+    { ticket_key: "SUP-7", title: "Laptop slow", status: "In Progress" },
+  ];
+  const listing = () =>
+    chatReply({
+      reply: "You have 2 tickets.",
+      pending_action: pending({ type: "select_ticket", options: tickets, prompt: "You have 2 tickets:\n1. SUP-12\n2. SUP-7" }),
+    });
+  /** What the server answers: the ticket asked for, with the same list still open. */
+  const shown = (key: string) =>
+    chatReply({
+      reply: `Ticket ${key} details`,
+      pending_action: pending({ type: "select_ticket", options: tickets, prompt: `Ticket ${key} details` }),
+    });
+
+  function stubTickets() {
+    return stubApi({
+      "POST /api/chat": (_u, init) => {
+        const message = JSON.parse(String(init?.body)).message as string;
+        if (message === "done") return json(chatReply({ reply: "Okay, no problem." }));
+        if (message === "SUP-12" || message === "SUP-7") return json(shown(message));
+        return json(listing());
+      },
+    });
+  }
+  const list = () => screen.getByRole("region", { name: "Choose a ticket" });
+
+  it("keeps the whole list after a ticket is shown", async () => {
+    stubTickets();
+    const { user } = renderChat();
+    await say(user, "show my tickets");
+    await user.click(await within(await screen.findByRole("region", { name: "Choose a ticket" })).findByRole("button", { name: /SUP-7/ }));
+    expect(await screen.findByText("Ticket SUP-7 details")).toBeVisible();
+    expect(within(list()).getByRole("button", { name: /SUP-12/ })).toBeEnabled();
+    expect(within(list()).getByRole("button", { name: /SUP-7/ })).toBeEnabled();
+  });
+
+  it("lets the employee click several tickets in a row, each one shown in the chat", async () => {
+    const { sentMessages } = stubTickets();
+    const { user } = renderChat();
+    await say(user, "show my tickets");
+    await screen.findByRole("region", { name: "Choose a ticket" });
+    for (const key of ["SUP-7", "SUP-12", "SUP-7"]) {
+      await user.click(within(list()).getByRole("button", { name: new RegExp(key) }));
+      await waitFor(() => expect(within(conversation()).getAllByText(`Ticket ${key} details`).length).toBeGreaterThan(0));
+    }
+    expect(sentMessages().map((m) => (m.body as { message: string }).message)).toEqual([
+      "show my tickets",
+      "SUP-7",
+      "SUP-12",
+      "SUP-7",
+    ]);
+    expect(within(conversation()).getAllByText(/Ticket SUP-7 details/)).toHaveLength(2);
+  });
+
+  it("has a Done button that closes the list and opens the text box", async () => {
+    const { sentMessages } = stubTickets();
+    const { user } = renderChat();
+    await say(user, "show my tickets");
+    await screen.findByRole("region", { name: "Choose a ticket" });
+    await user.click(within(list()).getByRole("button", { name: /SUP-12/ }));
+    await screen.findByText("Ticket SUP-12 details");
+    await user.click(within(list()).getByRole("button", { name: "Done" }));
+    expect(await screen.findByText("Okay, no problem.")).toBeVisible();
+    expect(screen.queryByRole("region", { name: "Choose a ticket" })).not.toBeInTheDocument();
+    expect(sentMessages().at(-1)?.body).toMatchObject({ message: "done" });
+    await waitFor(() => expect(screen.getByLabelText("Message")).toBeEnabled());
+  });
+
+  it("can also be closed with a close button in its header", async () => {
+    const { sentMessages } = stubTickets();
+    const { user } = renderChat();
+    await say(user, "show my tickets");
+    await screen.findByRole("region", { name: "Choose a ticket" });
+    const close = within(list()).getByRole("button", { name: "Close ticket list" });
+    expect(close.closest(".card-head")).toContainElement(screen.getByRole("heading", { name: "Choose a ticket" }));
+    await user.click(close);
+    expect(await screen.findByText("Okay, no problem.")).toBeVisible();
+    expect(screen.queryByRole("region", { name: "Choose a ticket" })).not.toBeInTheDocument();
+    expect(sentMessages().at(-1)?.body).toMatchObject({ message: "done" });
+    await waitFor(() => expect(screen.getByLabelText("Message")).toBeEnabled());
+  });
+
+  it("closes the list from the close button after tickets were looked at, too", async () => {
+    stubTickets();
+    const { user } = renderChat();
+    await say(user, "show my tickets");
+    await screen.findByRole("region", { name: "Choose a ticket" });
+    await user.click(within(list()).getByRole("button", { name: /SUP-7/ }));
+    await screen.findByText("Ticket SUP-7 details");
+    await user.click(within(list()).getByRole("button", { name: "Close ticket list" }));
+    expect(await screen.findByText("Okay, no problem.")).toBeVisible();
+  });
+
+  it("cannot be closed while a ticket is being loaded", async () => {
+    let release: (r: Response) => void = () => undefined;
+    stubApi({
+      "POST /api/chat": (_u, init) =>
+        JSON.parse(String(init?.body)).message === "SUP-7"
+          ? new Promise<Response>((resolve) => (release = resolve))
+          : json(listing()),
+    });
+    const { user } = renderChat();
+    await say(user, "show my tickets");
+    await screen.findByRole("region", { name: "Choose a ticket" });
+    await user.click(within(list()).getByRole("button", { name: /SUP-7/ }));
+    expect(within(list()).getByRole("button", { name: "Close ticket list" })).toBeDisabled();
+    expect(within(list()).getByRole("button", { name: "Done" })).toBeDisabled();
+    release(json(shown("SUP-7")));
+  });
+
+  it("keeps the text box locked while the list is open, and says how to leave", async () => {
+    stubTickets();
+    const { user } = renderChat();
+    await say(user, "show my tickets");
+    await screen.findByRole("region", { name: "Choose a ticket" });
+    await user.click(within(list()).getByRole("button", { name: /SUP-7/ }));
+    await screen.findByText("Ticket SUP-7 details");
+    expect(screen.getByLabelText("Message")).toBeDisabled();
+    expect(screen.getByText("Pick another ticket above, or press Done to ask something else.")).toBeVisible();
+  });
+
+  it("keeps keyboard focus on the ticket that was clicked, not back on the first", async () => {
+    stubTickets();
+    const { user } = renderChat();
+    await say(user, "show my tickets");
+    await screen.findByRole("region", { name: "Choose a ticket" });
+    await user.click(within(list()).getByRole("button", { name: /SUP-7/ }));
+    await screen.findByText("Ticket SUP-7 details");
+    await waitFor(() => expect(within(list()).getByRole("button", { name: /SUP-7/ })).toHaveFocus());
+  });
+
+  it("shows the list again after a reload", async () => {
+    sessionStorage.setItem("tier0.thread", THREAD);
+    stubApi({
+      [`GET /api/chat/${THREAD}`]: () =>
+        json({
+          thread_id: THREAD,
+          messages: [{ role: "user", content: "show my tickets" }],
+          pending_action: pending({ type: "select_ticket", options: tickets, prompt: "Ticket SUP-7 details" }),
+        }),
+    });
+    renderChat();
+    expect(await screen.findByText("Ticket SUP-7 details")).toBeVisible();
+    expect(within(list()).getAllByRole("button")).toHaveLength(4);
   });
 });

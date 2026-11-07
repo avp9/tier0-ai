@@ -71,6 +71,8 @@ export function ChatPage({ me, onSignOut, onSessionExpired }: Props) {
   const logRef = useRef<HTMLDivElement>(null);
   /** The reader is at the bottom of the conversation, so a new reply should be brought into view. */
   const following = useRef(true);
+  /** The last button the employee pressed, so focus can come back to it (a list of tickets stays). */
+  const lastChoice = useRef<string | null>(null);
   /** The next change of messages is a different conversation being shown: start at its end. */
   const showEnd = useRef(false);
 
@@ -150,8 +152,13 @@ export function ChatPage({ me, onSignOut, onSessionExpired }: Props) {
   // After each reply, put the keyboard where the next action is.
   useEffect(() => {
     if (busy || restoring) return;
-    if (hasControls(pending)) panelRef.current?.querySelector("button")?.focus();
-    else composerRef.current?.focus();
+    if (hasControls(pending)) {
+      const panel = panelRef.current;
+      const again = [...(panel?.querySelectorAll<HTMLElement>("[data-choice]") ?? [])].find(
+        (el) => el.getAttribute("data-choice") === lastChoice.current,
+      );
+      (again ?? panel?.querySelector("button"))?.focus();
+    } else composerRef.current?.focus();
   }, [pending, busy, restoring]);
 
   /** Send one turn: a typed message, or (with ``edit``) the employee's changes to the ticket. */
@@ -349,7 +356,10 @@ export function ChatPage({ me, onSignOut, onSessionExpired }: Props) {
           <PendingActionPanel
             action={pending}
             busy={busy}
-            onChoose={(m) => void send(m, false)}
+            onChoose={(m) => {
+              lastChoice.current = m;
+              void send(m, false);
+            }}
             onEdit={(edit) => send(EDITED_TEXT, false, edit)}
             panelRef={panelRef}
           />
@@ -372,7 +382,9 @@ export function ChatPage({ me, onSignOut, onSessionExpired }: Props) {
             />
             <p id="composer-hint" className="hint">
               {waitingForChoice
-                ? "Please answer the question above to continue."
+                ? pending?.type === "select_ticket"
+                  ? "Pick another ticket above, or press Done to ask something else."
+                  : "Please answer the question above to continue."
                 : "Press Enter to send, Shift+Enter for a new line."}
             </p>
             <button type="submit" className="send" disabled={!canSend} aria-label="Send">

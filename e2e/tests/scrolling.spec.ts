@@ -58,7 +58,7 @@ test("clicking a ticket does not move the chat while the reply is on its way", a
   const before = await scrollOf(page);
   expect(before.max).toBeGreaterThan(0); // there is something to scroll
   await delayReplies(page, 1500);
-  await page.getByRole("region", { name: "Choose a ticket" }).getByRole("button").first().click();
+  await page.getByRole("region", { name: "Choose a ticket" }).getByRole("button", { name: /SUP-\d+/ }).first().click();
   await expect(page.getByRole("status").filter({ hasText: /typing/i })).toBeVisible();
   await page.waitForTimeout(400);
   const during = await scrollOf(page);
@@ -71,16 +71,23 @@ test("a reply is brought into view when the reader was at the bottom", async ({
   controls,
 }) => {
   await reachTicketChoice(page, controls);
-  await page.getByRole("region", { name: "Choose a ticket" }).getByRole("button").first().click();
+  await page.getByRole("region", { name: "Choose a ticket" }).getByRole("button", { name: /SUP-\d+/ }).first().click();
   await expect(conversation(page)).toContainText("Latest updates from the support team");
   const visible = await page.evaluate(() => {
     const log = document.querySelector(".log") as HTMLElement;
     const last = log.querySelector("ol > li:last-child") as HTMLElement;
     const l = log.getBoundingClientRect();
     const r = last.getBoundingClientRect();
-    return { topIn: r.top >= l.top - 1, bottomIn: r.bottom <= l.bottom + 1 };
+    return {
+      topIn: r.top >= l.top - 1,
+      bottomIn: r.bottom <= l.bottom + 1,
+      tall: r.height > log.clientHeight,
+    };
   });
-  expect(visible.topIn && visible.bottomIn).toBe(true);
+  // A reply that fits is shown whole; one taller than the visible chat (the ticket list stays
+  // on screen and takes room) starts at its first line instead.
+  expect(visible.topIn).toBe(true);
+  expect(visible.bottomIn || visible.tall).toBe(true);
 });
 
 test("someone reading earlier messages is not pulled down by a reply", async ({
@@ -90,7 +97,7 @@ test("someone reading earlier messages is not pulled down by a reply", async ({
   await reachTicketChoice(page, controls);
   await page.locator(".log").evaluate((el) => (el.scrollTop = 0));
   await page.waitForTimeout(150);
-  await page.getByRole("region", { name: "Choose a ticket" }).getByRole("button").first().click();
+  await page.getByRole("region", { name: "Choose a ticket" }).getByRole("button", { name: /SUP-\d+/ }).first().click();
   await expect(conversation(page)).toContainText("Latest updates from the support team");
   await page.waitForTimeout(300);
   const after = await scrollOf(page);
@@ -104,7 +111,7 @@ test("a reply taller than the window starts at its top, not its end", async ({
 }) => {
   await page.setViewportSize({ width: 1280, height: 440 });
   await reachTicketChoice(page, controls);
-  await page.getByRole("region", { name: "Choose a ticket" }).getByRole("button").first().click();
+  await page.getByRole("region", { name: "Choose a ticket" }).getByRole("button", { name: /SUP-\d+/ }).first().click();
   await expect(conversation(page)).toContainText("Latest updates from the support team");
   const where = await page.evaluate(() => {
     const log = document.querySelector(".log") as HTMLElement;

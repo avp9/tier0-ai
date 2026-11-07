@@ -688,6 +688,21 @@ label {
   text-align: left;
 }
 
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.card-head .icon-button {
+  margin: -8px -8px -8px 0;
+}
+
+.list-actions {
+  margin-top: 12px;
+}
+
 .ticket-key {
   font-weight: 700;
 }

@@ -68,6 +68,21 @@ def interpret(text: str) -> Reply:
     return next(iter(polarities)) if len(polarities) == 1 else Reply.UNCLEAR
 
 
+# Phrases that end a list of tickets the employee has been looking through.
+FINISHED_PHRASES = {
+    "done", "im done", "i am done", "all done", "finished", "that is all", "thats all",
+    "that will be all", "no more", "nothing else", "no thats all", "no thats it", "thats it",
+}  # fmt: skip
+
+
+def wants_to_finish(text: str) -> bool:
+    """True only when the whole message is an unmistakable "I'm done looking"."""
+    if "?" in text:
+        return False
+    tokens = _tokens(text)
+    return bool(tokens) and " ".join(tokens) in FINISHED_PHRASES
+
+
 def wants_to_cancel(text: str) -> bool:
     """True only when the whole message is an unmistakable "forget it"."""
     if "?" in text:
