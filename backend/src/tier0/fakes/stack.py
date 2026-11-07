@@ -10,6 +10,7 @@ from __future__ import annotations
 import html
 import json
 import re
+from collections.abc import Iterator
 from dataclasses import dataclass
 
 from tier0.intent.types import (
@@ -21,6 +22,7 @@ from tier0.intent.types import (
     Turn,
 )
 from tier0.llm.base import LLMError
+from tier0.llm.fake import words
 from tier0.rag import answerability, answering, rewrite
 from tier0.tickets import drafting
 from tier0.tickets.confirmation import Reply, interpret
@@ -113,6 +115,9 @@ class ScriptedChatModel:
         if system == drafting.SYSTEM_PROMPT:
             return self._draft(user)
         raise LLMError("scripted model received an unexpected prompt")
+
+    def stream(self, system: str, user: str) -> Iterator[str]:
+        yield from words(self.complete(system, user))
 
     @staticmethod
     def _sufficiency(user: str) -> str:

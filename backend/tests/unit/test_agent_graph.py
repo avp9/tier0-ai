@@ -1,4 +1,4 @@
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import pytest
@@ -16,10 +16,13 @@ from tier0.agent.service import (
     Awaiting,
     ChatTurn,
     ThreadOwnershipError,
+    TokenEvent,
 )
 from tier0.agent.state import WorkflowStatus
 from tier0.agent.ticket_flow import CANCELLED_REPLY
 from tier0.intent.types import Continuity, Domain, Intent, IntentResult
+from tier0.llm.base import LLMError
+from tier0.rag.answering import UNAVAILABLE_REPLY
 from tier0.rag.embeddings import FakeEmbedder
 from tier0.rag.indexer import build_index
 from tier0.rag.loader import load_knowledge_base
@@ -51,6 +54,63 @@ def test_a_covered_question_is_answered_with_its_source(h: Harness) -> None:
     assert turn.reply.endswith("Sources: Documents to Bring on Your First Day")
     assert [s.document_id for s in turn.sources] == ["onb-002"]
     assert turn.intent is not None and turn.intent.intent is Intent.KNOWLEDGE_QUESTION
+
+
+# --- streaming the reply as it is written ------------------------------------------------
+
+
+def run_stream(h: Harness, text: str, thread: str = "s1") -> tuple[list[str], ChatTurn]:
+    events = list(h.agent.stream(thread_id=thread, requester_email=ALICE, message=text))
+    *tokens, turn = events
+    assert all(isinstance(t, TokenEvent) for t in tokens) and isinstance(turn, ChatTurn)
+    return [t.text for t in tokens if isinstance(t, TokenEvent)], turn
+
+
+def test_a_streamed_answer_arrives_in_pieces_and_ends_with_the_same_turn_as_send(
+    h: Harness,
+) -> None:
+    pieces, streamed = run_stream(h, ANSWERABLE)
+    sent = h.say(ANSWERABLE, thread="s2")
+    assert len(pieces) > 1 and "".join(pieces) == "Here is what the handbook says."
+    assert streamed.reply == sent.reply and streamed.sources == sent.sources
+    assert streamed.workflow is sent.workflow and streamed.awaiting == sent.awaiting
+
+
+def test_a_reply_that_is_not_written_by_the_model_arrives_whole_without_pieces(
+    h: Harness,
+) -> None:
+    pieces, turn = run_stream(h, GAP)
+    assert pieces == [] and turn.awaiting is Awaiting.OFFER_TICKET
+
+
+def test_a_streamed_conversation_continues_like_any_other(h: Harness) -> None:
+    run_stream(h, GAP, thread="s3")
+    _, turn = run_stream(h, "yes", thread="s3")
+    assert turn.awaiting is Awaiting.CONFIRM_TICKET
+
+
+def test_a_failure_part_way_replaces_the_half_written_answer_with_the_outage_reply(
+    h: Harness,
+) -> None:
+    def broken(system: str, user: str) -> Iterator[str]:
+        yield "Here is"
+        raise LLMError("connection dropped")
+
+    h.llm.stream = broken  # type: ignore[method-assign]
+    pieces, turn = run_stream(h, ANSWERABLE)
+    assert pieces == ["Here is"]
+    assert turn.reply == UNAVAILABLE_REPLY and turn.sources == []
+
+
+def test_someone_elses_conversation_is_refused_before_any_text_is_sent(h: Harness) -> None:
+    h.say(ANSWERABLE, thread="private")
+    with pytest.raises(ThreadOwnershipError):
+        h.agent.stream(thread_id="private", requester_email=BOB, message="hello")
+
+
+def test_an_empty_message_is_refused_before_any_text_is_sent(h: Harness) -> None:
+    with pytest.raises(ValueError, match="empty"):
+        h.agent.stream(thread_id="s4", requester_email=ALICE, message="   ")
 
 
 # --- flow B: knowledge gap -> offer -> ticket ------------------------------------------

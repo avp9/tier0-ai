@@ -1,3 +1,4 @@
+import json
 import threading
 import uuid
 from collections.abc import Iterator
@@ -65,6 +66,67 @@ def chat(client: TestClient, message: str, thread_id: str | None = None, **extra
     if thread_id:
         body["thread_id"] = thread_id
     return client.post("/api/chat", json=body)
+
+
+def parse_sse(text: str) -> list[tuple[str, Any]]:
+    events = []
+    for block in text.strip().split("\n\n"):
+        name, data = block.split("\n", 1)
+        events.append((name.removeprefix("event: "), json.loads(data.removeprefix("data: "))))
+    return events
+
+
+STREAM = {"Accept": "text/event-stream"}
+
+
+# --- streaming ------------------------------------------------------------------------
+
+
+def test_a_streamed_answer_sends_pieces_then_the_same_turn_the_json_endpoint_gives(
+    alice: TestClient,
+) -> None:
+    response = alice.post("/api/chat", json={"message": ANSWERABLE}, headers=STREAM)
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/event-stream")
+    assert response.headers["cache-control"] == "no-store"
+    assert response.headers["x-accel-buffering"] == "no"
+    *tokens, (name, done) = parse_sse(response.text)
+    assert name == "done" and tokens and all(kind == "token" for kind, _ in tokens)
+    assert "".join(data["text"] for _, data in tokens) == "Here is what the handbook says."
+    plain = chat(alice, ANSWERABLE).json()
+    assert {**done, "thread_id": None} == {**plain, "thread_id": None}
+
+
+def test_a_streamed_reply_the_model_did_not_write_is_just_the_final_event(
+    alice: TestClient,
+) -> None:
+    response = alice.post("/api/chat", json={"message": GAP}, headers=STREAM)
+    ((name, done),) = parse_sse(response.text)
+    assert name == "done" and done["pending_action"]["type"] == "offer_ticket"
+
+
+def test_streaming_still_refuses_before_sending_anything(alice: TestClient) -> None:
+    assert alice.post("/api/chat", json={"message": "  "}, headers=STREAM).status_code == 422
+    first = chat(alice, ANSWERABLE).json()["thread_id"]
+    with TestClient(alice.app) as bob:
+        sign_in(bob, BOB)
+        response = bob.post("/api/chat", json={"message": "hi", "thread_id": first}, headers=STREAM)
+    assert response.status_code == 404 and response.json() == NOT_FOUND
+    with TestClient(alice.app) as anonymous:
+        assert anonymous.post("/api/chat", json={"message": "x"}, headers=STREAM).status_code == 401
+
+
+def test_a_failure_while_streaming_ends_with_an_error_event_and_no_details(
+    alice: TestClient, harness: Harness
+) -> None:
+    def explode(*_a: Any, **_k: Any) -> Any:
+        raise RuntimeError("secret internal detail")
+
+    harness.agent._graph.stream = explode  # type: ignore[method-assign]
+    response = alice.post("/api/chat", json={"message": ANSWERABLE}, headers=STREAM)
+    ((name, data),) = parse_sse(response.text)
+    assert name == "error" and "secret" not in response.text
+    assert data == {"detail": "Something went wrong. Please try again."}
 
 
 # --- authentication ------------------------------------------------------------------

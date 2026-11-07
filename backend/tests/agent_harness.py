@@ -84,9 +84,9 @@ class SpyAnswers(AnswerService):
         super().__init__(*args, **kwargs)
         self.questions: list[str] = []
 
-    def answer(self, question: str):  # type: ignore[no-untyped-def]
+    def answer(self, question, on_token=None):  # type: ignore[no-untyped-def]
         self.questions.append(question)
-        return super().answer(question)
+        return super().answer(question, on_token)
 
 
 class Harness:

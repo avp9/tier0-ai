@@ -49,3 +49,26 @@ export function pending(overrides: Partial<PendingAction> = {}): PendingAction {
 }
 
 export const ME = { email: "alice@buzztech.example", display_name: "Alice Demo" };
+
+const encoder = new TextEncoder();
+export const sse = (name: string, data: unknown) =>
+  encoder.encode(`event: ${name}\ndata: ${JSON.stringify(data)}\n\n`);
+
+/** A reply streamed as server-sent events that the test feeds one piece at a time. */
+export function streamedReply() {
+  let controller!: ReadableStreamDefaultController<Uint8Array>;
+  const body = new ReadableStream<Uint8Array>({
+    start: (c) => (controller = c),
+  });
+  return {
+    response: () =>
+      new Response(body, { headers: { "Content-Type": "text/event-stream" } }),
+    token: (text: string) => controller.enqueue(sse("token", { text })),
+    done: (reply: ChatResponse) => {
+      controller.enqueue(sse("done", reply));
+      controller.close();
+    },
+    send: (chunk: Uint8Array) => controller.enqueue(chunk),
+    close: () => controller.close(),
+  };
+}

@@ -28,34 +28,120 @@ function readableDetail(body: unknown): string {
   return GENERIC_MESSAGE;
 }
 
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-  let response: Response;
+async function failure(response: Response): Promise<ApiError> {
+  let body: unknown = null;
   try {
-    response = await fetch(path, {
+    body = await response.json();
+  } catch {
+    /* the server sent no readable body */
+  }
+  const wait = Number(response.headers.get("Retry-After"));
+  return new ApiError(
+    response.status,
+    readableDetail(body),
+    Number.isFinite(wait) && wait > 0 ? wait : null,
+  );
+}
+
+async function send(path: string, init: RequestInit, accept?: string): Promise<Response> {
+  const headers: Record<string, string> = {};
+  if (init.body) headers["Content-Type"] = "application/json";
+  if (accept) headers.Accept = accept;
+  try {
+    return await fetch(path, {
       ...init,
       credentials: "same-origin",
-      headers: init.body ? { "Content-Type": "application/json" } : undefined,
+      headers: Object.keys(headers).length > 0 ? headers : undefined,
     });
   } catch {
     throw new ApiError(0, NETWORK_MESSAGE);
   }
+}
 
-  if (!response.ok) {
-    let body: unknown = null;
-    try {
-      body = await response.json();
-    } catch {
-      /* the server sent no readable body */
-    }
-    const wait = Number(response.headers.get("Retry-After"));
-    throw new ApiError(
-      response.status,
-      readableDetail(body),
-      Number.isFinite(wait) && wait > 0 ? wait : null,
-    );
-  }
+async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const response = await send(path, init);
+  if (!response.ok) throw await failure(response);
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
+}
+
+const INTERRUPTED_MESSAGE = "The connection was interrupted. Please try again.";
+
+/** Read server-sent events: "token" pieces while the reply is written, then "done" with the turn. */
+async function readReplyStream(
+  body: ReadableStream<Uint8Array>,
+  onToken: (text: string) => void,
+): Promise<ChatResponse> {
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let done: ChatResponse | null = null;
+
+  const handle = (block: string) => {
+    let name = "";
+    let data = "";
+    for (const line of block.split("\n")) {
+      if (line.startsWith("event:")) name = line.slice(6).trim();
+      else if (line.startsWith("data:")) data += line.slice(5).trim();
+    }
+    if (!name || !data) return;
+    let payload: unknown;
+    try {
+      payload = JSON.parse(data);
+    } catch {
+      return;
+    }
+    if (name === "token") {
+      const text = (payload as { text?: unknown }).text;
+      if (typeof text === "string") onToken(text);
+    } else if (name === "done") {
+      done = payload as ChatResponse;
+    } else if (name === "error") {
+      throw new ApiError(500, readableDetail(payload));
+    }
+  };
+
+  try {
+    for (;;) {
+      const { value, done: finished } = await reader.read();
+      buffer += decoder.decode(value, { stream: !finished });
+      let end = buffer.indexOf("\n\n");
+      while (end !== -1) {
+        handle(buffer.slice(0, end));
+        buffer = buffer.slice(end + 2);
+        end = buffer.indexOf("\n\n");
+      }
+      if (finished) break;
+    }
+  } catch (failed) {
+    if (failed instanceof ApiError) throw failed;
+    throw new ApiError(0, INTERRUPTED_MESSAGE);
+  }
+  if (buffer.trim()) handle(buffer);
+  if (!done) throw new ApiError(0, INTERRUPTED_MESSAGE);
+  return done;
+}
+
+/**
+ * Send a chat message. A server that streams answers with server-sent events; anything else
+ * (an older server, a proxy that buffers) is read as the ordinary single JSON reply.
+ */
+async function sendChat(
+  message: string,
+  threadId: string | null,
+  onToken: (text: string) => void,
+): Promise<ChatResponse> {
+  const response = await send(
+    "/api/chat",
+    { method: "POST", body: JSON.stringify(threadId ? { message, thread_id: threadId } : { message }) },
+    "text/event-stream, application/json",
+  );
+  if (!response.ok) throw await failure(response);
+  const type = response.headers.get("Content-Type") ?? "";
+  if (!type.includes("text/event-stream") || !response.body) {
+    return (await response.json()) as ChatResponse;
+  }
+  return readReplyStream(response.body, onToken);
 }
 
 export const api = {
@@ -66,11 +152,12 @@ export const api = {
     }),
   logout: () => request<undefined>("/api/auth/logout", { method: "POST" }),
   me: () => request<Me>("/api/auth/me"),
-  sendMessage: (message: string, threadId: string | null) =>
-    request<ChatResponse>("/api/chat", {
-      method: "POST",
-      body: JSON.stringify(threadId ? { message, thread_id: threadId } : { message }),
-    }),
+  /** ``onToken`` receives the reply text as it is written, when the server streams it. */
+  sendMessage: (
+    message: string,
+    threadId: string | null,
+    onToken: (text: string) => void = () => {},
+  ) => sendChat(message, threadId, onToken),
   history: (threadId: string) => request<HistoryResponse>(`/api/chat/${encodeURIComponent(threadId)}`),
 };
 

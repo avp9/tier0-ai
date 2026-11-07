@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Hashable
+from collections.abc import Callable, Hashable
 from dataclasses import dataclass
 from typing import Any
 
 from langgraph.checkpoint.base import BaseCheckpointSaver
+from langgraph.config import get_config, get_stream_writer
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import interrupt
@@ -56,6 +57,17 @@ def _assistant(text: str) -> Turn:
 
 def _user(text: str) -> Turn:
     return Turn(role="user", content=text)
+
+
+STREAM_TOKENS = "stream_tokens"  # set in the run config when the caller wants the reply as it forms
+
+
+def _token_sink() -> Callable[[str], None] | None:
+    """Where to send reply text as it is written, or None when the caller wants it whole."""
+    if not get_config().get("configurable", {}).get(STREAM_TOKENS):
+        return None
+    writer = get_stream_writer()
+    return lambda text: writer({"token": text})
 
 
 def _say(reply: str) -> dict[str, Any]:
@@ -115,7 +127,7 @@ class Conversation:
         question = message
         if intent is not None and intent.continuity is Continuity.CONTINUATION:
             question = self._deps.rewriter.rewrite(message, state["turns"][:-1])
-        result = self._deps.answers.answer(question)
+        result = self._deps.answers.answer(question, on_token=_token_sink())
         update: dict[str, Any] = {
             "answer_decision": result.decision,
             "sources": result.sources,
