@@ -17,6 +17,7 @@ from tier0.intent.factory import build_classifier
 from tier0.intent.types import IntentClassifier
 from tier0.llm.base import ChatModel
 from tier0.llm.openai_chat import OpenAIChatModel
+from tier0.observability.tracing import Tracing, build_tracing
 from tier0.rag import answerability, answering
 from tier0.rag.answerability import AnswerabilityConfig
 from tier0.rag.answering import AnswerService
@@ -49,6 +50,7 @@ class BuiltAgent:
     index_check: Callable[[], bool]
     controls: FakeControls | None = None
     retriever: Retriever | None = None
+    tracing: Tracing | None = None
 
 
 @dataclass(frozen=True)
@@ -185,7 +187,8 @@ def build_agent_from_settings(
 ) -> BuiltAgent:
     """Wire the agent. Raises ChatNotConfigured, IndexNotFoundError or IndexMismatchError."""
     parts = build_components(settings, pool)
-    service = build_agent(parts.deps, checkpointer or make_checkpointer(pool))
+    tracing = build_tracing(settings)
+    service = build_agent(parts.deps, checkpointer or make_checkpointer(pool), tracing)
     index_dir = Path(settings.vector_store_path)
 
     def index_check() -> bool:
@@ -196,4 +199,5 @@ def build_agent_from_settings(
         index_check=index_check,
         controls=parts.controls,
         retriever=parts.retriever,
+        tracing=tracing,
     )

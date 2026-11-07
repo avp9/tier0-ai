@@ -1498,3 +1498,151 @@ describe("answers reused from the cache", () => {
     expect(await within(conversation()).findByText("Answered from cache")).toBeVisible();
   });
 });
+
+describe("rating an answer", () => {
+  const TOKEN = "11111111-2222-4333-8444-555555555555.abcdefabcdefabcdefabcdef";
+  const answered = () => json(chatReply({ reply: "Use the portal.", feedback_token: TOKEN }));
+  const group = () => within(conversation()).getByRole("group", { name: "Rate this answer" });
+  const up = () => within(group()).getByRole("button", { name: "Good answer" });
+  const down = () => within(group()).getByRole("button", { name: "Bad answer" });
+
+  function stubRating(feedback: (body: Record<string, unknown>) => Response = () => json({ vote: "up" })) {
+    return stubApi({
+      "POST /api/chat": answered,
+      "POST /api/feedback": (_u, init) => feedback(JSON.parse(String(init?.body))),
+    });
+  }
+
+  async function answerReady() {
+    const view = renderChat();
+    await say(view.user, "How do I reset my password?");
+    await within(conversation()).findByText("Use the portal.");
+    return view;
+  }
+
+  it("offers thumbs up and down under a finished answer", async () => {
+    stubRating();
+    await answerReady();
+    expect(up()).toHaveAttribute("aria-pressed", "false");
+    expect(down()).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("offers them only under answers, not under the employee's own message", async () => {
+    stubRating();
+    await answerReady();
+    expect(within(conversation()).getAllByRole("group", { name: "Rate this answer" })).toHaveLength(1);
+  });
+
+  it("offers nothing under a reply that cannot be rated", async () => {
+    stubApi({ "POST /api/chat": () => json(chatReply({ reply: "Whole." })) });
+    const { user } = renderChat();
+    await say(user, "hello");
+    await within(conversation()).findByText("Whole.");
+    expect(screen.queryByRole("group", { name: "Rate this answer" })).not.toBeInTheDocument();
+  });
+
+  it("sends a thumbs up with the answer's token and shows it as chosen", async () => {
+    const { calls } = stubRating();
+    const { user } = await answerReady();
+    await user.click(up());
+    await waitFor(() => expect(up()).toHaveAttribute("aria-pressed", "true"));
+    expect(down()).toHaveAttribute("aria-pressed", "false");
+    expect(calls.find((c) => c.path === "/api/feedback")?.body).toEqual({ token: TOKEN, vote: "up" });
+  });
+
+  it("sends a thumbs down", async () => {
+    const { calls } = stubRating(() => json({ vote: "down" }));
+    const { user } = await answerReady();
+    await user.click(down());
+    await waitFor(() => expect(down()).toHaveAttribute("aria-pressed", "true"));
+    expect(calls.find((c) => c.path === "/api/feedback")?.body).toMatchObject({ vote: "down" });
+  });
+
+  it("switches from one to the other", async () => {
+    stubRating();
+    const { user } = await answerReady();
+    await user.click(up());
+    await user.click(down());
+    await waitFor(() => expect(down()).toHaveAttribute("aria-pressed", "true"));
+    expect(up()).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("takes the rating back when the chosen thumb is pressed again", async () => {
+    const { calls } = stubRating();
+    const { user } = await answerReady();
+    await user.click(up());
+    await user.click(up());
+    await waitFor(() => expect(up()).toHaveAttribute("aria-pressed", "false"));
+    const bodies = calls.filter((c) => c.path === "/api/feedback").map((c) => c.body);
+    expect(bodies.at(-1)).toEqual({ token: TOKEN, vote: "none" });
+  });
+
+  it("shows the choice straight away, before the server has answered", async () => {
+    let release: (r: Response) => void = () => undefined;
+    stubApi({
+      "POST /api/chat": answered,
+      "POST /api/feedback": () => new Promise<Response>((resolve) => (release = resolve)),
+    });
+    const { user } = await answerReady();
+    await user.click(up());
+    expect(up()).toHaveAttribute("aria-pressed", "true");
+    release(json({ vote: "up" }));
+  });
+
+  it("puts the rating back and says so when it could not be saved", async () => {
+    stubRating(() => json({ detail: "boom" }, 500));
+    const { user } = await answerReady();
+    await user.click(up());
+    expect(await screen.findByRole("alert")).toHaveTextContent("Your rating could not be saved");
+    expect(up()).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("sends the employee back to sign in if the session has ended", async () => {
+    stubRating(() => json({ detail: "Not authenticated" }, 401));
+    const { user, onSessionExpired } = await answerReady();
+    await user.click(up());
+    await waitFor(() => expect(onSessionExpired).toHaveBeenCalled());
+  });
+
+  it("is reachable and named for a screen reader, and the pressed state is announced", async () => {
+    stubRating();
+    const { user } = await answerReady();
+    expect(group()).toHaveAccessibleName("Rate this answer");
+    await user.tab();
+    expect(up()).toBeInTheDocument();
+    await user.click(up());
+    await waitFor(() => expect(up()).toHaveAttribute("aria-pressed", "true"));
+  });
+
+  it("rates each answer on its own", async () => {
+    let n = 0;
+    stubApi({
+      "POST /api/chat": () =>
+        json(chatReply({ reply: `Answer ${++n}.`, feedback_token: `${TOKEN.slice(0, -1)}${n}` })),
+      "POST /api/feedback": () => json({ vote: "up" }),
+    });
+    const { user } = renderChat();
+    await say(user, "one");
+    await within(conversation()).findByText("Answer 1.");
+    await say(user, "two");
+    await within(conversation()).findByText("Answer 2.");
+    const groups = within(conversation()).getAllByRole("group", { name: "Rate this answer" });
+    await user.click(within(groups[0] as HTMLElement).getByRole("button", { name: "Good answer" }));
+    await waitFor(() =>
+      expect(within(groups[0] as HTMLElement).getByRole("button", { name: "Good answer" })).toHaveAttribute("aria-pressed", "true"),
+    );
+    expect(within(groups[1] as HTMLElement).getByRole("button", { name: "Good answer" })).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("offers a rating on a streamed answer once it is complete, not while it is half-written", async () => {
+    const stream = streamedReply();
+    stubApi({ "POST /api/chat": () => stream.response() });
+    const { user } = renderChat();
+    await say(user, "hello");
+    stream.token("Half");
+    await within(conversation()).findByText("Half");
+    expect(screen.queryByRole("group", { name: "Rate this answer" })).not.toBeInTheDocument();
+    stream.done(chatReply({ reply: "Half done.", feedback_token: TOKEN }));
+    expect(await within(conversation()).findByRole("group", { name: "Rate this answer" })).toBeVisible();
+  });
+});

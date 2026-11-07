@@ -20,6 +20,7 @@ from tier0.api.routes_chat import router as chat_router
 from tier0.api.routes_conversations import router as conversations_router
 from tier0.api.routes_diagnostics import router as diagnostics_router
 from tier0.api.routes_e2e import router as e2e_router
+from tier0.api.routes_feedback import router as feedback_router
 from tier0.api.routes_health import database_check, migrations_check
 from tier0.api.routes_health import router as health_router
 from tier0.api.static import frontend_available, mount_frontend
@@ -29,8 +30,10 @@ from tier0.auth.users import UserStore, seed_demo_users
 from tier0.config import Settings
 from tier0.conversations import ConversationStore
 from tier0.db.migrate import upgrade_with_lock
+from tier0.feedback import FeedbackStore
 from tier0.observability.context import start_request
 from tier0.observability.logs import configure_logging
+from tier0.observability.tracing import Tracing
 from tier0.rag.diagnostics import REPO_EVALUATION_DIR, RetrievalDiagnostics
 from tier0.rag.indexer import IndexNotFoundError
 from tier0.rag.retriever import IndexMismatchError
@@ -46,6 +49,7 @@ def create_app(
     pool: ConnectionPool | None = None,
     agent: AgentService | None = None,
     diagnostics: RetrievalDiagnostics | None = None,
+    tracing: Tracing | None = None,
 ) -> FastAPI:
     """Build the web application.
 
@@ -67,6 +71,8 @@ def create_app(
             app.state.pool = active
             app.state.users = users
             app.state.conversations = ConversationStore(active)
+            app.state.feedback = FeedbackStore(active)
+            app.state.tracing = tracing
             app.state.codec = SessionCodec(
                 settings.session_secret.get_secret_value(), settings.session_max_age_hours * 3600
             )
@@ -87,6 +93,7 @@ def create_app(
                 built = _build_agent(settings, active)
                 app.state.agent = built.service if built else None
                 if built is not None:
+                    app.state.tracing = built.tracing
                     app.state.e2e_controls = built.controls
                     if built.retriever is not None:
                         app.state.diagnostics = RetrievalDiagnostics(
@@ -101,6 +108,8 @@ def create_app(
             app.state.readiness_checks = checks
             yield
         finally:
+            if app.state.tracing is not None:
+                app.state.tracing.flush()  # send the last traces before the process ends
             if own_pool:
                 active.close()
 
@@ -169,6 +178,7 @@ def create_app(
     app.include_router(auth_router)
     app.include_router(chat_router)
     app.include_router(conversations_router)
+    app.include_router(feedback_router)
     app.include_router(diagnostics_router)
     if settings.e2e_controls_enabled:
         app.include_router(e2e_router)

@@ -68,7 +68,11 @@ export interface ChatResponse {
   ticket: TicketRef | null;
   /** The answer was reused from an earlier, similar question rather than worked out afresh. */
   cached?: boolean;
+  /** Hand this back to rate the answer. Only finished answers carry one. */
+  feedback_token?: string | null;
 }
+
+export type Vote = "up" | "down";
 
 export interface HistoryResponse {
   thread_id: string;

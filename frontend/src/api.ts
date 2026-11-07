@@ -5,6 +5,7 @@ import type {
   Me,
   RetrievalReport,
   TicketEdit,
+  Vote,
 } from "./types";
 
 export const MAX_MESSAGE_CHARS = 2000;
@@ -169,6 +170,12 @@ export const api = {
   /** Replace the ticket preview's contents with the employee's edits (nothing is sent yet). */
   editTicket: (ticketEdit: TicketEdit, threadId: string) =>
     sendChat({ ticket_edit: ticketEdit }, threadId, () => {}),
+  /** Rate an answer. ``vote`` null takes the rating back. */
+  sendFeedback: (token: string, vote: Vote | null) =>
+    request<{ vote: Vote | "none" }>("/api/feedback", {
+      method: "POST",
+      body: JSON.stringify({ token, vote: vote ?? "none" }),
+    }),
   conversations: () => request<Conversation[]>("/api/conversations"),
   /** How well the knowledge-base search finds the right article. ``refresh`` runs it again. */
   retrievalReport: (refresh = false) =>

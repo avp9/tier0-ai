@@ -80,6 +80,7 @@ All settings are environment variables ([`.env.example`](.env.example) has a tem
 | `VECTOR_STORE_PATH` | | The Chroma index folder (default `.data/chroma`) |
 | `RETRIEVAL_TOP_K`, `RETRIEVAL_SCORE_THRESHOLD` | | Retrieval depth and the minimum similarity to answer |
 | `REDIS_URL` | | Optional Redis (with the search module: Redis 8 or Redis Stack) for the [answer cache](docs/semantic-cache.md); empty means no cache |
+| `LANGSMITH_TRACING`, `LANGSMITH_API_KEY`, `LANGSMITH_ENDPOINT`, `LANGSMITH_AGENT_ID` | | Optional [LangSmith](docs/langsmith.md) tracing of every turn (personal details masked), thumbs up/down on answers, and evaluation experiments. The key is required outside local runs when tracing is on |
 | `SEMANTIC_CACHE_SIMILARITY`, `SEMANTIC_CACHE_TTL_SECONDS`, `SEMANTIC_CACHE_TIMEOUT_SECONDS` | | How alike two questions must be to share an answer (default 0.88; the same question always does), how long answers are kept (a day), and the Redis timeout (0.5 s) |
 | `EVALUATION_DIR` | | Folder with `retrieval_cases.json` and `knowledge_gaps.json` for the header's search quality check (default `data/evaluation` in a checkout; the production image does not include it) |
 | `STATIC_DIR` | | The built web app (`frontend/dist`); the server serves it when set |

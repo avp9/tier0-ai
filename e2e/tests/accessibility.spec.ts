@@ -59,3 +59,16 @@ test("the chat page with the text box greyed out has no detectable violations", 
   const results = await new AxeBuilder({ page }).withTags(TAGS).analyze();
   expect(results.violations).toEqual([]);
 });
+
+test("the chat page with an answer and its rating buttons has no detectable violations", async ({
+  page,
+  controls: _controls,
+}) => {
+  await signIn(page);
+  await say(page, "Request for VPN setup for remote work");
+  await expect(page.getByRole("group", { name: "Rate this answer" })).toBeVisible();
+  await page.getByRole("button", { name: "Good answer" }).click();
+  await expect(page.getByRole("button", { name: "Good answer" })).toHaveAttribute("aria-pressed", "true");
+  const results = await new AxeBuilder({ page }).withTags(TAGS).analyze();
+  expect(results.violations).toEqual([]);
+});

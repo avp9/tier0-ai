@@ -83,6 +83,8 @@ class ChatResponse(BaseModel):
     pending_action: PendingAction | None = None
     ticket: TicketRef | None = None
     cached: bool = False  # the answer was reused from an earlier, similar question
+    # Hand this back to POST /api/feedback to vote on the answer. Only for finished answers.
+    feedback_token: str | None = None
 
 
 class HistoryResponse(BaseModel):

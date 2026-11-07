@@ -73,6 +73,15 @@ class Settings(BaseSettings):
     semantic_cache_similarity: float = Field(default=0.88, ge=0.5, le=1.0)
     semantic_cache_ttl_seconds: int = Field(default=86400, ge=1)
     semantic_cache_timeout_seconds: float = Field(default=0.5, gt=0.0, le=10.0)
+    # LangSmith tracing of every chat turn, with personal details removed first. Each environment
+    # writes to its own project, "<agent id>-<local|staging|production>". The test stack never
+    # traces.
+    langsmith_tracing: bool = False
+    langsmith_api_key: SecretStr | None = None
+    langsmith_endpoint: str = "https://api.smith.langchain.com"
+    langsmith_agent_id: str = Field(
+        default="tier0-support-agent", pattern=r"^[a-z][a-z0-9-]{0,61}$"
+    )
     # Folder with retrieval_cases.json and knowledge_gaps.json for the search check in the header.
     # Empty means <repo>/data/evaluation, which exists when running from a checkout.
     evaluation_dir: str = ""
@@ -84,6 +93,12 @@ class Settings(BaseSettings):
     jira_requester_field_name: str = "Requester Email"
     jira_issue_type: str = "Task"
     jira_set_priority_field: bool = False
+
+    @model_validator(mode="after")
+    def _tracing_needs_a_key_in_deployments(self) -> Settings:
+        if self.langsmith_tracing and self.langsmith_api_key is None and not self.is_local:
+            raise ValueError("LANGSMITH_API_KEY is required when LANGSMITH_TRACING is on")
+        return self
 
     @model_validator(mode="after")
     def _fakes_only_outside_deployments(self) -> Settings:

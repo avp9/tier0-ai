@@ -5,6 +5,8 @@ import math
 import re
 from typing import Protocol
 
+from tier0.observability.tracing import traced
+
 OPENAI_BATCH_SIZE = 256
 FAKE_DIMENSIONS = 256
 _WORD = re.compile(r"[a-z0-9]+")
@@ -49,6 +51,12 @@ class OpenAIEmbedder:
     def model_id(self) -> str:
         return f"openai:{self._model}"
 
+    @traced(
+        run_type="embedding",
+        name="openai_embedding",
+        process_inputs=lambda inputs: {"texts": len(inputs.get("texts") or [])},
+        process_outputs=lambda vectors: {"vectors": len(vectors)},
+    )
     def embed(self, texts: list[str]) -> list[list[float]]:
         vectors: list[list[float]] = []
         for start in range(0, len(texts), OPENAI_BATCH_SIZE):

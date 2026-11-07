@@ -9,6 +9,7 @@ import requests
 from jira import JIRA
 from jira.exceptions import JIRAError
 
+from tier0.observability.tracing import drop_self, traced
 from tier0.tickets.config import SUBMISSION_LABEL_PREFIX, JiraConfig
 from tier0.tickets.errors import (
     TicketError,
@@ -138,6 +139,7 @@ class JiraAdapter:
     def url_for(self, key: str) -> str:
         return f"{self._config.server}/browse/{key}"
 
+    @traced(run_type="tool", name="jira_create_ticket", process_inputs=drop_self)
     def create_ticket(self, draft: TicketDraft) -> CreatedTicket:
         try:
             issue = self._jira.create_issue(fields=self.build_fields(draft))
@@ -151,10 +153,12 @@ class JiraAdapter:
             raise TicketOutcomeUnknown("ticketing response did not name the new ticket")
         return CreatedTicket(key=key, url=self.url_for(key))
 
+    @traced(run_type="tool", name="jira_find_tickets", process_inputs=drop_self)
     def find_tickets(self, requester_email: str) -> list[TicketSummary]:
         email = validate_email(requester_email)
         return self._search(f"{self._scope(email)} ORDER BY updated DESC", email)
 
+    @traced(run_type="tool", name="jira_get_ticket", process_inputs=drop_self)
     def get_ticket(self, key: str, requester_email: str) -> TicketDetails:
         email = validate_email(requester_email)
         validate_ticket_key(key)
@@ -171,6 +175,7 @@ class JiraAdapter:
             raise TicketServiceUnavailable("unexpected ticketing response") from error
         return TicketDetails(summary=found[0], comments=comments)
 
+    @traced(run_type="tool", name="jira_find_by_submission_id", process_inputs=drop_self)
     def find_by_submission_id(
         self, submission_id: str, requester_email: str
     ) -> TicketSummary | None:
