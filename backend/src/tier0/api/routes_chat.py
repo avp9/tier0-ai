@@ -1,13 +1,16 @@
 from __future__ import annotations
 
+import json
 import logging
 import time
+from collections.abc import Iterator
 from typing import Annotated
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import StreamingResponse
 
-from tier0.agent.service import AgentService, ThreadNotFound
+from tier0.agent.service import AgentService, ChatTurn, ThreadNotFound, TokenEvent
 from tier0.api.deps import current_user, same_origin
 from tier0.api.schemas import (
     ChatRequest,
@@ -33,10 +36,58 @@ def _agent(request: Request) -> AgentService:
     return agent
 
 
+STREAM_FAILED = "Something went wrong. Please try again."
+# Keep proxies from holding the stream back. (API responses already get Cache-Control: no-store.)
+SSE_HEADERS = {"X-Accel-Buffering": "no"}
+
+
+def _wants_stream(request: Request) -> bool:
+    return "text/event-stream" in request.headers.get("accept", "")
+
+
+def _log_turn(turn: ChatTurn, message: str, started: float) -> None:
+    # Counts and labels only: what the employee or the agent said is never logged.
+    log.info(
+        "chat turn",
+        extra={
+            "fields": {
+                "intent": turn.intent.intent.value if turn.intent else None,
+                "intent_source": turn.intent.source if turn.intent else None,
+                "workflow": turn.workflow.value,
+                "awaiting": turn.awaiting.value if turn.awaiting else None,
+                "sources": len(turn.sources),
+                "ticket_key": turn.created_ticket.key if turn.created_ticket else None,
+                "message_chars": len(message),
+                "duration_ms": round((time.perf_counter() - started) * 1000, 1),
+            }
+        },
+    )
+
+
+def _event(name: str, data: object) -> str:
+    return f"event: {name}\ndata: {json.dumps(data)}\n\n"
+
+
+def _sse(
+    events: Iterator[TokenEvent | ChatTurn], email: str, message: str, started: float
+) -> Iterator[str]:
+    """Server-sent events: ``token`` pieces as the reply forms, then ``done`` with the turn."""
+    try:
+        for item in events:
+            if isinstance(item, TokenEvent):
+                yield _event("token", {"text": item.text})
+            else:
+                _log_turn(item, message, started)
+                yield _event("done", to_chat_response(item, email).model_dump(mode="json"))
+    except Exception:
+        log.exception("chat stream failed")
+        yield _event("error", {"detail": STREAM_FAILED})
+
+
 @router.post("", response_model=ChatResponse, dependencies=[Depends(same_origin)])
 def send_message(
     body: ChatRequest, request: Request, user: Annotated[User, Depends(current_user)]
-) -> ChatResponse:
+) -> ChatResponse | StreamingResponse:
     agent = _agent(request)
     if body.thread_id:
         bind_thread(str(body.thread_id), str(user.id))
@@ -51,28 +102,22 @@ def send_message(
     thread_id = str(body.thread_id or uuid4())
     bind_thread(thread_id, str(user.id))
     started = time.perf_counter()
+    # The requester is always the signed-in employee, never anything from the request body.
     try:
-        # The requester is always the signed-in employee, never anything from the request body.
+        if _wants_stream(request):
+            events = agent.stream(
+                thread_id=thread_id, requester_email=user.email, message=body.message
+            )
+            return StreamingResponse(
+                _sse(events, user.email, body.message, started),
+                media_type="text/event-stream",
+                headers=SSE_HEADERS,
+            )
         turn = agent.send(thread_id=thread_id, requester_email=user.email, message=body.message)
     except ThreadNotFound:
         log.warning("conversation not found or not owned")
         raise HTTPException(status.HTTP_404_NOT_FOUND, NOT_FOUND) from None
-    # Counts and labels only: what the employee or the agent said is never logged.
-    log.info(
-        "chat turn",
-        extra={
-            "fields": {
-                "intent": turn.intent.intent.value if turn.intent else None,
-                "intent_source": turn.intent.source if turn.intent else None,
-                "workflow": turn.workflow.value,
-                "awaiting": turn.awaiting.value if turn.awaiting else None,
-                "sources": len(turn.sources),
-                "ticket_key": turn.created_ticket.key if turn.created_ticket else None,
-                "message_chars": len(body.message),
-                "duration_ms": round((time.perf_counter() - started) * 1000, 1),
-            }
-        },
-    )
+    _log_turn(turn, body.message, started)
     return to_chat_response(turn, user.email)
 
 

@@ -38,6 +38,8 @@ export function ChatPage({ me, onSignOut, onSessionExpired }: Props) {
   const [threadId, setThreadId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
+  /** The start of the answer, while it is still being written. */
+  const [live, setLive] = useState<string | null>(null);
   const [restoring, setRestoring] = useState(() => threadStore.get() !== null);
   const [error, setError] = useState<string | null>(null);
 
@@ -78,7 +80,7 @@ export function ChatPage({ me, onSignOut, onSessionExpired }: Props) {
   // Keep the newest message in view.
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: "end" });
-  }, [items, pending, busy]);
+  }, [items, pending, busy, live]);
 
   // After each reply, put the keyboard where the next action is.
   useEffect(() => {
@@ -96,7 +98,11 @@ export function ChatPage({ me, onSignOut, onSessionExpired }: Props) {
       const sent = newItem("user", message);
       setItems((previous) => [...previous, sent]);
       try {
-        const reply: ChatResponse = await api.sendMessage(message, threadId);
+        let written = "";
+        const reply: ChatResponse = await api.sendMessage(message, threadId, (piece) => {
+          written += piece;
+          setLive(written);
+        });
         threadStore.set(reply.thread_id);
         setThreadId(reply.thread_id);
         setItems((previous) => [
@@ -110,6 +116,7 @@ export function ChatPage({ me, onSignOut, onSessionExpired }: Props) {
         if (failure instanceof ApiError && failure.status === 401) onSessionExpired();
         else setError(describe(failure));
       } finally {
+        setLive(null);
         setBusy(false);
       }
     },
@@ -168,10 +175,18 @@ export function ChatPage({ me, onSignOut, onSessionExpired }: Props) {
             {items.map((item) => (
               <MessageItem key={item.id} item={item} />
             ))}
+            {live !== null && (
+              <MessageItem item={{ id: 0, role: "assistant", text: live, sources: [], ticket: null }} live />
+            )}
           </ol>
-          {busy && (
-            <p role="status" className="thinking">
-              Tier0 is thinking…
+          {busy && live === null && (
+            <p role="status" className="typing">
+              <span className="dots" aria-hidden="true">
+                <i />
+                <i />
+                <i />
+              </span>
+              Tier0 is typing…
             </p>
           )}
           <div ref={endRef} />

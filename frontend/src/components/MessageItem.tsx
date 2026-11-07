@@ -28,10 +28,11 @@ function CreatedTicket({ ticket }: { ticket: TicketRef }) {
   );
 }
 
-export function MessageItem({ item }: { item: Item }) {
+/** ``live``: the text is still arriving, so screen readers wait for the final reply. */
+export function MessageItem({ item, live = false }: { item: Item; live?: boolean }) {
   const mine = item.role === "user";
   return (
-    <li className={`message ${mine ? "mine" : "theirs"}`}>
+    <li className={`message ${mine ? "mine" : "theirs"}`} aria-live={live ? "off" : undefined}>
       <span className="who">{mine ? "You" : "Tier0"}</span>
       {/* Always a text node: replies can contain anything and must never be treated as HTML. */}
       <p className="bubble">{item.text}</p>

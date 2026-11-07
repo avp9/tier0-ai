@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
-from tier0.llm.base import ChatModel, LLMError
+from tier0.llm.base import ChatModel, LLMError, StreamingChatModel
 from tier0.rag.answerability import (
     AnswerabilityConfig,
     AnswerabilityDecision,
@@ -71,7 +72,8 @@ class AnswerService:
         self._chat = chat
         self._config = config or AnswerabilityConfig()
 
-    def answer(self, question: str) -> AnswerResult:
+    def answer(self, question: str, on_token: Callable[[str], None] | None = None) -> AnswerResult:
+        """Answer from the knowledge base. ``on_token`` gets the reply text as it is written."""
         hits = self._retriever.search(question, k=self._config.top_k)
         retrieved_ids = [h.document_id for h in hits]
         try:
@@ -83,9 +85,8 @@ class AnswerService:
                     decision=decision,
                     retrieved_ids=retrieved_ids,
                 )
-            text = self._chat.complete(
-                ANSWER_SYSTEM, f"QUESTION: {question}\n\nPASSAGES:\n{format_passages(passages)}"
-            ).strip()
+            prompt = f"QUESTION: {question}\n\nPASSAGES:\n{format_passages(passages)}"
+            text = self._write_answer(prompt, on_token)
         except LLMError:
             return AnswerResult(
                 outcome=Outcome.UNAVAILABLE, reply=UNAVAILABLE_REPLY, retrieved_ids=retrieved_ids
@@ -104,6 +105,15 @@ class AnswerService:
             decision=decision,
             retrieved_ids=retrieved_ids,
         )
+
+    def _write_answer(self, prompt: str, on_token: Callable[[str], None] | None) -> str:
+        if on_token is None or not isinstance(self._chat, StreamingChatModel):
+            return self._chat.complete(ANSWER_SYSTEM, prompt).strip()
+        pieces: list[str] = []
+        for piece in self._chat.stream(ANSWER_SYSTEM, prompt):
+            pieces.append(piece)
+            on_token(piece)
+        return "".join(pieces).strip()
 
     @staticmethod
     def _sources(decision: AnswerabilityDecision, passages: list[Hit]) -> list[Source]:

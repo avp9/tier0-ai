@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ChatPage } from "./ChatPage";
-import { ME, chatReply, json, pending, stubApi } from "./test/helpers";
+import { ME, chatReply, json, pending, sse, streamedReply, stubApi } from "./test/helpers";
 
 const THREAD = "11111111-1111-4111-8111-111111111111";
 
@@ -99,12 +99,12 @@ describe("sending messages", () => {
     });
     const { user } = renderChat();
     await say(user, "hello");
-    expect(await screen.findByText("Tier0 is thinking…")).toBeVisible();
+    expect(await screen.findByText("Tier0 is typing…")).toBeVisible();
     expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
     await user.type(screen.getByLabelText("Message"), "{Enter}");
     expect(sentMessages()).toHaveLength(1);
     release(json(chatReply()));
-    await waitFor(() => expect(screen.queryByText("Tier0 is thinking…")).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByText("Tier0 is typing…")).not.toBeInTheDocument());
   });
 });
 
@@ -557,5 +557,111 @@ describe("page structure", () => {
     const button = await screen.findByRole("button", { name: /SUP-1/ });
     expect(button).not.toHaveAttribute("aria-label");
     expect(button).toHaveAccessibleName("SUP-1 Laptop slow Open");
+  });
+});
+
+describe("streaming the answer", () => {
+  it("shows a typing indicator, then the answer as it is written, then the final reply", async () => {
+    const stream = streamedReply();
+    stubApi({ "POST /api/chat": () => stream.response() });
+    const { user } = renderChat();
+    await say(user, "hello");
+
+    expect(await screen.findByText("Tier0 is typing…")).toBeVisible();
+
+    stream.token("Here is ");
+    expect(await within(conversation()).findByText("Here is")).toBeVisible();
+    expect(screen.queryByText("Tier0 is typing…")).not.toBeInTheDocument();
+    stream.token("the answer.");
+    expect(
+      await within(conversation()).findByText("Here is the answer."),
+    ).toBeVisible();
+
+    stream.done(
+      chatReply({
+        reply: "Here is the answer.\n\nSources: VPN",
+        sources: [{ document_id: "a", title: "VPN", category: "IT" }],
+      }),
+    );
+    await waitFor(() =>
+      expect(screen.getByRole("list", { name: "Sources" })).toBeVisible(),
+    );
+    expect(
+      within(conversation()).getAllByText("Here is the answer."),
+    ).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "Send" })).toBeDisabled(); // box is empty again
+  });
+
+  it("asks the server to stream, and still reads a plain JSON reply", async () => {
+    const { fetchMock } = stubApi({
+      "POST /api/chat": () => json(chatReply({ reply: "Whole." })),
+    });
+    const { user } = renderChat();
+    await say(user, "hello");
+    expect(await within(conversation()).findByText("Whole.")).toBeVisible();
+    const init = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    expect((init.headers as Record<string, string>).Accept).toContain(
+      "text/event-stream",
+    );
+  });
+
+  it("reads events split across network chunks", async () => {
+    const stream = streamedReply();
+    stubApi({ "POST /api/chat": () => stream.response() });
+    const { user } = renderChat();
+    await say(user, "hello");
+    const piece = sse("token", { text: "Split reply" });
+    stream.send(piece.slice(0, 10));
+    stream.send(piece.slice(10));
+    expect(
+      await within(conversation()).findByText("Split reply"),
+    ).toBeVisible();
+    stream.done(chatReply({ reply: "Split reply" }));
+  });
+
+  it("drops a half-written answer and says so when the connection breaks", async () => {
+    const stream = streamedReply();
+    stubApi({ "POST /api/chat": () => stream.response() });
+    const { user } = renderChat();
+    await say(user, "hello");
+    stream.token("Half an ans");
+    expect(
+      await within(conversation()).findByText("Half an ans"),
+    ).toBeVisible();
+    stream.close(); // ends without a "done" event
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "connection was interrupted",
+    );
+    expect(
+      within(conversation()).queryByText("Half an ans"),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Tier0 is typing…")).not.toBeInTheDocument();
+  });
+
+  it("shows a plain sentence, not server details, when the stream reports an error", async () => {
+    const stream = streamedReply();
+    stubApi({ "POST /api/chat": () => stream.response() });
+    const { user } = renderChat();
+    await say(user, "hello");
+    stream.send(
+      sse("error", { detail: "Something went wrong. Please try again." }),
+    );
+    stream.close();
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Something went wrong",
+    );
+  });
+
+  it("keeps the half-written text out of the screen reader announcements", async () => {
+    const stream = streamedReply();
+    stubApi({ "POST /api/chat": () => stream.response() });
+    const { user } = renderChat();
+    await say(user, "hello");
+    stream.token("Typing along");
+    const live = (
+      await within(conversation()).findByText("Typing along")
+    ).closest("li");
+    expect(live).toHaveAttribute("aria-live", "off");
+    stream.done(chatReply({ reply: "Typing along" }));
   });
 });

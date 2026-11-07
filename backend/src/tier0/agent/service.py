@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import threading
+from collections.abc import Iterator
+from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
 
@@ -9,7 +11,7 @@ from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import Command
 from pydantic import BaseModel, Field
 
-from tier0.agent.graph import AgentDependencies, build_conversation_graph
+from tier0.agent.graph import STREAM_TOKENS, AgentDependencies, build_conversation_graph
 from tier0.agent.state import PendingTicket, WorkflowStatus
 from tier0.intent.types import IntentResult, Turn
 from tier0.rag.answering import Source
@@ -50,6 +52,13 @@ class ChatTurn(BaseModel):
     ticket_choices: list[TicketSummary] = Field(default_factory=list)
 
 
+@dataclass(frozen=True)
+class TokenEvent:
+    """A piece of the reply text, sent while the reply is still being written."""
+
+    text: str
+
+
 class ThreadView(BaseModel):
     """A conversation as the employee has seen it so far."""
 
@@ -69,29 +78,63 @@ class AgentService:
     def _lock_for(self, thread_id: str) -> threading.Lock:
         return self._locks[hash(thread_id) % LOCK_STRIPES]
 
-    def send(self, *, thread_id: str, requester_email: str, message: str) -> ChatTurn:
+    @staticmethod
+    def _clean(requester_email: str, message: str) -> tuple[str, str]:
         email = validate_email(requester_email).lower()
         text = message.strip()
         if not text:
             raise ValueError("message must not be empty")
         if len(text) > MAX_MESSAGE_CHARS:
             raise ValueError(f"message must be at most {MAX_MESSAGE_CHARS} characters")
+        return email, text
 
+    def _check_owner(self, config: Any, email: str, thread_id: str) -> Any:
+        snapshot = self._graph.get_state(config)
+        owner = snapshot.values.get("requester_email")
+        if owner and str(owner).lower() != email:
+            raise ThreadOwnershipError(thread_id)
+        return snapshot
+
+    @staticmethod
+    def _input(snapshot: Any, email: str, text: str) -> Any:
+        if snapshot.interrupts:  # the agent is waiting for exactly this message
+            return Command(resume=text)
+        return {"requester_email": email, "user_message": text}
+
+    def send(self, *, thread_id: str, requester_email: str, message: str) -> ChatTurn:
+        email, text = self._clean(requester_email, message)
         config: Any = {"configurable": {"thread_id": thread_id}}
         with self._lock_for(thread_id):
-            snapshot = self._graph.get_state(config)
-            owner = snapshot.values.get("requester_email")
-            if owner and str(owner).lower() != email:
-                raise ThreadOwnershipError(thread_id)
-
-            if snapshot.interrupts:  # the agent is waiting for exactly this message
-                result = self._graph.invoke(Command(resume=text), config)
-            else:
-                result = self._graph.invoke(
-                    {"requester_email": email, "user_message": text}, config
-                )
+            snapshot = self._check_owner(config, email, thread_id)
+            result = self._graph.invoke(self._input(snapshot, email, text), config)
             saved = dict(self._graph.get_state(config).values)
         return self._turn(thread_id, saved, result.get("__interrupt__"))
+
+    def stream(
+        self, *, thread_id: str, requester_email: str, message: str
+    ) -> Iterator[TokenEvent | ChatTurn]:
+        """Like ``send``, but yields the reply text as it is written, then the finished turn.
+
+        Problems with the request (empty message, someone else's conversation) are raised here,
+        before anything is yielded, so the caller can still answer with an error status.
+        """
+        email, text = self._clean(requester_email, message)
+        self._check_owner({"configurable": {"thread_id": thread_id}}, email, thread_id)
+        return self._events(thread_id, email, text)
+
+    def _events(self, thread_id: str, email: str, text: str) -> Iterator[TokenEvent | ChatTurn]:
+        config: Any = {"configurable": {"thread_id": thread_id, STREAM_TOKENS: True}}
+        with self._lock_for(thread_id):
+            snapshot = self._check_owner(config, email, thread_id)
+            for chunk in self._graph.stream(
+                self._input(snapshot, email, text), config, stream_mode="custom"
+            ):
+                token = chunk.get("token") if isinstance(chunk, dict) else None
+                if token:
+                    yield TokenEvent(text=str(token))
+            final = self._graph.get_state(config)
+            turn = self._turn(thread_id, dict(final.values), final.interrupts)
+        yield turn
 
     def history(self, *, thread_id: str, requester_email: str) -> ThreadView:
         """The conversation so far. Raises ThreadNotFound unless it exists and is theirs."""
