@@ -75,6 +75,8 @@ export function ChatPage({ me, onSignOut, onSessionExpired }: Props) {
   const lastChoice = useRef<string | null>(null);
   /** The next change of messages is a different conversation being shown: start at its end. */
   const showEnd = useRef(false);
+  /** The employee just typed a message: bring it, and "is typing", into view. */
+  const justSent = useRef(false);
 
   /** Show a saved conversation and remember it for a reload. */
   const showHistory = useCallback((history: HistoryResponse) => {
@@ -127,13 +129,15 @@ export function ChatPage({ me, onSignOut, onSessionExpired }: Props) {
   }, [onSessionExpired, showHistory]);
 
   // Bring a new reply into view, but only when the reader was already at the bottom, and only by
-  // scrolling the conversation itself (never the page). Nothing moves when the employee sends a
-  // message or clicks a button, and a reply taller than the window starts at its top.
+  // scrolling the conversation itself (never the page). A message the employee types is shown at
+  // once with "is typing" under it; clicking a button moves nothing; and a reply taller than the
+  // window starts at its top.
   useEffect(() => {
     const log = logRef.current;
     if (!log) return;
-    if (showEnd.current) {
+    if (showEnd.current || justSent.current) {
       showEnd.current = false;
+      justSent.current = false;
       following.current = true;
       log.scrollTop = log.scrollHeight;
       return;
@@ -147,7 +151,7 @@ export function ChatPage({ me, onSignOut, onSessionExpired }: Props) {
     const bottomAligned = top + box.height - log.clientHeight + 8;
     const target = Math.min(bottomAligned, top - 8); // the end if it fits, else its start
     if (target > log.scrollTop) log.scrollTop = target;
-  }, [items, live]);
+  }, [items, live, busy]);
 
   // After each reply, put the keyboard where the next action is.
   useEffect(() => {
@@ -172,6 +176,7 @@ export function ChatPage({ me, onSignOut, onSessionExpired }: Props) {
       // Clear the box now, not when the reply ends: the employee may already be typing the next
       // message while this answer streams in, and it must not be wiped.
       if (fromComposer) setDraft("");
+      justSent.current = fromComposer; // typed here, so show it; a button click moves nothing
       const sent = newItem("user", message);
       setItems((previous) => [...previous, sent]);
       try {
