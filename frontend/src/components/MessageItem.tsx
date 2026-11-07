@@ -30,11 +30,16 @@ function CreatedTicket({ ticket }: { ticket: TicketRef }) {
   );
 }
 
+/** Tier0's own picture. Its name is the alt text, so the words are not repeated on screen. */
+export function AssistantPicture({ size = 36 }: { size?: number }) {
+  return (
+    <img className="speaker" src={assistantAvatar} alt="Tier0" width={size} height={size} />
+  );
+}
+
 /** Who is speaking: Tier0's own picture, or the employee's headshot (by their gender). */
 export function Speaker({ role, gender }: { role: Role; gender?: Me["gender"] }) {
-  if (role === "assistant") {
-    return <img className="speaker" src={assistantAvatar} alt="Tier0" width={36} height={36} />;
-  }
+  if (role === "assistant") return <AssistantPicture />;
   return (
     <span className="speaker" role="img" aria-label="You">
       <Headshot gender={gender} />

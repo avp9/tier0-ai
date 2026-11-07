@@ -21,6 +21,10 @@ test("AT-14 a language model outage never invents an answer", async ({ page, con
   await say(page, "Unable to reset password via self-service portal");
   await expect(page.getByRole("status").filter({ hasText: /typing/i })).toHaveCount(0);
   await expect(conversation(page)).not.toContainText("Here is what our knowledge base says");
+  // The agent offers a ticket instead; the text box waits until that offer is answered.
+  await expect(page.getByRole("region", { name: "Raise a support ticket?" })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: /message/i })).toBeDisabled();
+  await page.getByRole("button", { name: "No thanks" }).click();
   await controls.reset();
   await say(page, "Unable to reset password via self-service portal");
   await expect(conversation(page)).toContainText("Here is what our knowledge base says");

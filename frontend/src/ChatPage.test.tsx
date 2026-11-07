@@ -102,12 +102,12 @@ describe("sending messages", () => {
     });
     const { user } = renderChat();
     await say(user, "hello");
-    expect(await screen.findByText("Tier0 is typing…")).toBeVisible();
+    expect(await screen.findByText("is typing…")).toBeVisible();
     expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
     await user.type(screen.getByLabelText("Message"), "{Enter}");
     expect(sentMessages()).toHaveLength(1);
     release(json(chatReply()));
-    await waitFor(() => expect(screen.queryByText("Tier0 is typing…")).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByText("is typing…")).not.toBeInTheDocument());
   });
 });
 
@@ -571,11 +571,11 @@ describe("streaming the answer", () => {
     const { user } = renderChat();
     await say(user, "hello");
 
-    expect(await screen.findByText("Tier0 is typing…")).toBeVisible();
+    expect(await screen.findByText("is typing…")).toBeVisible();
 
     stream.token("Here is ");
     expect(await within(conversation()).findByText("Here is")).toBeVisible();
-    expect(screen.queryByText("Tier0 is typing…")).not.toBeInTheDocument();
+    expect(screen.queryByText("is typing…")).not.toBeInTheDocument();
     stream.token("the answer.");
     expect(
       await within(conversation()).findByText("Here is the answer."),
@@ -665,7 +665,7 @@ describe("streaming the answer", () => {
     expect(
       within(conversation()).queryByText("Half an ans"),
     ).not.toBeInTheDocument();
-    expect(screen.queryByText("Tier0 is typing…")).not.toBeInTheDocument();
+    expect(screen.queryByText("is typing…")).not.toBeInTheDocument();
   });
 
   it("shows a plain sentence, not server details, when the stream reports an error", async () => {
@@ -801,7 +801,7 @@ describe("the chat history", () => {
     const { user } = renderChat();
     const link = await within(sidebar()).findByRole("link", { name: "Monitor flickers when docked" });
     await say(user, "hello");
-    await screen.findByText("Tier0 is typing…");
+    await screen.findByText("is typing…");
     expect(link).toHaveAttribute("aria-disabled", "true");
     expect(screen.getByRole("button", { name: "New chat" })).toBeDisabled();
     await user.click(link);
@@ -1119,5 +1119,186 @@ describe("editing the ticket before it is sent", () => {
     await user.click(within(card).getByRole("button", { name: "Save changes" }));
     const updated = await screen.findByText("<img src=x onerror=alert(1)>");
     expect(updated.closest("section")?.querySelector("img, b")).toBeNull();
+  });
+});
+
+describe("the typing indicator", () => {
+  it("shows Tier0's picture with the words is typing, not the name Tier0", async () => {
+    let release: (r: Response) => void = () => undefined;
+    stubApi({ "POST /api/chat": () => new Promise<Response>((resolve) => (release = resolve)) });
+    const { user } = renderChat();
+    await say(user, "hello");
+    const row = (await screen.findByText("is typing…")).closest("p") as HTMLElement;
+    expect(row).toHaveAttribute("role", "status");
+    const picture = within(row).getByRole("img", { name: "Tier0" }); // the name screen readers hear
+    expect(picture).toHaveAttribute("src", expect.stringContaining("tier0-avatar"));
+    expect(screen.queryByText("Tier0 is typing…")).not.toBeInTheDocument();
+    release(json(chatReply()));
+  });
+
+  it("goes away once the reply starts to arrive", async () => {
+    const stream = streamedReply();
+    stubApi({ "POST /api/chat": () => stream.response() });
+    const { user } = renderChat();
+    await say(user, "hello");
+    await screen.findByText("is typing…");
+    stream.token("Here");
+    await within(conversation()).findByText("Here");
+    expect(screen.queryByText("is typing…")).not.toBeInTheDocument();
+    stream.done(chatReply({ reply: "Here" }));
+  });
+});
+
+describe("the header icons", () => {
+  it("signs out with an icon button named Sign out, with no visible label", async () => {
+    const { onSignOut, user } = renderChat();
+    const button = screen.getByRole("button", { name: "Sign out" });
+    expect(within(button).queryByText("Sign out")).not.toBeInTheDocument(); // an icon, not words
+    expect(button.querySelector("svg")).not.toBeNull();
+    await user.click(button);
+    expect(onSignOut).toHaveBeenCalledTimes(1);
+  });
+
+  it("puts the search check button to the left of the employee's icon", () => {
+    renderChat();
+    const check = screen.getByRole("button", { name: "Search quality check" });
+    const avatar = screen.getByRole("button", { name: "Signed in as Alice Demo" });
+    const signOut = screen.getByRole("button", { name: "Sign out" });
+    const order = [check, avatar, signOut].map((el) =>
+      Array.from(document.querySelectorAll("button")).indexOf(el as HTMLButtonElement),
+    );
+    expect(order).toEqual([...order].sort((a, b) => a - b));
+  });
+
+  it("opens the search check over the chat, and gives focus back when it closes", async () => {
+    stubApi({ "GET /api/diagnostics/retrieval": () => json(RETRIEVAL_REPORT) });
+    const { user } = renderChat();
+    const opener = screen.getByRole("button", { name: "Search quality check" });
+    await user.click(opener);
+    const dialog = await screen.findByRole("dialog", { name: "Search quality check" });
+    expect(await within(dialog).findByRole("button", { name: "What is Hit@1?" })).toBeVisible();
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(opener).toHaveFocus();
+  });
+});
+
+const RETRIEVAL_REPORT = {
+  generated_at: "2026-11-07T10:02:00Z",
+  duration_s: 1.2,
+  embedding_model: "test-model",
+  cases: 3,
+  gap_questions: 2,
+  ranks: [
+    { k: 1, hit: 0.5, recall: 0.5 },
+    { k: 3, hit: 0.7, recall: 0.7 },
+    { k: 5, hit: 0.9, recall: 0.9 },
+  ],
+  mrr: 0.6,
+  by_kind: [],
+  misses_at: 5,
+  misses: [],
+  separation: { answerable_min: 0.4, answerable_median: 0.6, gap_max: 0.5, gap_median: 0.35, separable: false },
+  threshold: { current: 0.3, suggested: 0.45, answerable_kept: 0.8, gaps_rejected: 0.9, separable: false },
+};
+
+describe("waiting for the employee's choice", () => {
+  const preview = {
+    requester_email: "alice@buzztech.example",
+    title: "VPN drops",
+    description: "It drops.",
+    category: "IT" as const,
+    priority: null,
+  };
+  const box = () => screen.getByLabelText("Message");
+
+  const waiting = {
+    "an offer to raise a ticket": () => pending(),
+    "a ticket preview": () => pending({ type: "confirm_ticket", preview, editable: true }),
+    "a choice of ticket": () =>
+      pending({
+        type: "select_ticket",
+        options: [{ ticket_key: "SUP-1", title: "Laptop", status: "Open" }],
+      }),
+  };
+
+  it.each(Object.entries(waiting))("greys out the text box while it waits on %s", async (_name, action) => {
+    stubApi({ "POST /api/chat": () => json(chatReply({ pending_action: action() })) });
+    const { user } = renderChat();
+    await say(user, "something");
+    await waitFor(() => expect(box()).toBeDisabled());
+    expect(box()).toHaveAttribute("placeholder", "Choose an option above to continue");
+    expect(screen.getByText("Please answer the question above to continue.")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
+    expect(box().closest("form")).toHaveClass("locked");
+  });
+
+  it("keeps it open when the agent is asking for typed details", async () => {
+    stubApi({
+      "POST /api/chat": () =>
+        json(
+          chatReply({
+            reply: "What happened?",
+            pending_action: pending({ type: "collect_ticket_details", prompt: "What happened?" }),
+          }),
+        ),
+    });
+    const { user } = renderChat();
+    await say(user, "raise a ticket");
+    await screen.findByText("What happened?");
+    expect(box()).toBeEnabled();
+    expect(box().closest("form")).not.toHaveClass("locked");
+  });
+
+  it("opens it again as soon as the employee answers with a button", async () => {
+    stubApi({
+      "POST /api/chat": (_u, init) =>
+        JSON.parse(String(init?.body)).message === "no"
+          ? json(chatReply({ reply: "No problem." }))
+          : json(chatReply({ pending_action: pending() })),
+    });
+    const { user } = renderChat();
+    await say(user, "question");
+    await waitFor(() => expect(box()).toBeDisabled());
+    await user.click(screen.getByRole("button", { name: "No thanks" }));
+    await waitFor(() => expect(box()).toBeEnabled());
+    expect(box()).toHaveAttribute("placeholder", "Ask anything…");
+    expect(box().closest("form")).not.toHaveClass("locked");
+  });
+
+  it("cannot be bypassed with the Enter key or by typing before it locks", async () => {
+    const { sentMessages } = stubApi({
+      "POST /api/chat": () => json(chatReply({ pending_action: pending() })),
+    });
+    const { user } = renderChat();
+    await say(user, "question");
+    await waitFor(() => expect(box()).toBeDisabled());
+    await user.type(box(), "something else{Enter}"); // a disabled box takes no input
+    expect(box()).toHaveValue("");
+    expect(sentMessages()).toHaveLength(1);
+  });
+
+  it("is locked after a reload that restores an open question", async () => {
+    sessionStorage.setItem("tier0.thread", THREAD);
+    stubApi({
+      [`GET /api/chat/${THREAD}`]: () =>
+        json({
+          thread_id: THREAD,
+          messages: [{ role: "assistant", content: "Shall I raise a ticket?" }],
+          pending_action: pending(),
+        }),
+    });
+    renderChat();
+    await screen.findByText("Shall I raise a ticket?");
+    expect(box()).toBeDisabled();
+  });
+
+  it("still lets the employee leave by starting a new chat", async () => {
+    stubApi({ "POST /api/chat": () => json(chatReply({ pending_action: pending() })) });
+    const { user } = renderChat();
+    await say(user, "question");
+    await waitFor(() => expect(box()).toBeDisabled());
+    await user.click(screen.getByRole("button", { name: "New chat" }));
+    expect(box()).toBeEnabled();
   });
 });

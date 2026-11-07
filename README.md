@@ -79,6 +79,7 @@ All settings are environment variables ([`.env.example`](.env.example) has a tem
 | `JIRA_PROJECT_KEY` (`SUP`), `JIRA_REQUESTER_FIELD_ID` / `_NAME`, `JIRA_ISSUE_TYPE`, `JIRA_SET_PRIORITY_FIELD` | | Where tickets go and how the requester is stored |
 | `VECTOR_STORE_PATH` | | The Chroma index folder (default `.data/chroma`) |
 | `RETRIEVAL_TOP_K`, `RETRIEVAL_SCORE_THRESHOLD` | | Retrieval depth and the minimum similarity to answer |
+| `EVALUATION_DIR` | | Folder with `retrieval_cases.json` and `knowledge_gaps.json` for the header's search quality check (default `data/evaluation` in a checkout; the production image does not include it) |
 | `STATIC_DIR` | | The built web app (`frontend/dist`); the server serves it when set |
 | `LLM_PROVIDER`, `TICKETING_PROVIDER` | | `openai`/`jira` (default) or `fake` (local and e2e only) |
 | `SESSION_MAX_AGE_HOURS`, `LOGIN_MAX_FAILURES_PER_EMAIL`, `LOGIN_MAX_FAILURES_PER_IP`, `LOGIN_WINDOW_MINUTES`, `CHAT_MESSAGES_PER_MINUTE` | | Session length and rate limits |

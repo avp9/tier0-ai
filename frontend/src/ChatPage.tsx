@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { ApiError, MAX_MESSAGE_CHARS, api, waitText } from "./api";
 import { Avatar } from "./components/Avatar";
-import { MessageItem, type Item } from "./components/MessageItem";
+import { CardiogramIcon, SignOutIcon } from "./components/icons";
+import { HeaderButton } from "./components/HeaderButton";
+import { AssistantPicture, MessageItem, type Item } from "./components/MessageItem";
+import { RetrievalCheck } from "./components/RetrievalCheck";
 import { PendingActionPanel, hasControls } from "./components/PendingActionPanel";
 import { Sidebar } from "./components/Sidebar";
 import { promptText, replyText } from "./format";
@@ -61,6 +64,7 @@ export function ChatPage({ me, onSignOut, onSessionExpired }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(() => !isNarrow());
+  const [checkOpen, setCheckOpen] = useState(false);
 
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const panelRef = useRef<HTMLElement>(null);
@@ -132,6 +136,7 @@ export function ChatPage({ me, onSignOut, onSessionExpired }: Props) {
     async (text: string, fromComposer: boolean, edit?: TicketEdit): Promise<boolean> => {
       const message = text.trim();
       if (!message || busy) return false;
+      if (fromComposer && hasControls(pending)) return false; // an answer is needed first
       setBusy(true);
       setError(null);
       // Clear the box now, not when the reply ends: the employee may already be typing the next
@@ -173,7 +178,7 @@ export function ChatPage({ me, onSignOut, onSessionExpired }: Props) {
         setBusy(false);
       }
     },
-    [busy, threadId, onSessionExpired, refreshConversations, showHistory],
+    [busy, threadId, pending, onSessionExpired, refreshConversations, showHistory],
   );
 
   function submit(event: FormEvent) {
@@ -214,7 +219,10 @@ export function ChatPage({ me, onSignOut, onSessionExpired }: Props) {
     }
   }
 
-  const canSend = draft.trim().length > 0 && !busy;
+  // While the agent waits for a choice on the buttons (offer, preview, pick a ticket), the box is
+  // locked so the question cannot be skipped by typing something else.
+  const waitingForChoice = hasControls(pending);
+  const canSend = draft.trim().length > 0 && !busy && !waitingForChoice;
 
   return (
     <div className="app">
@@ -249,10 +257,13 @@ export function ChatPage({ me, onSignOut, onSessionExpired }: Props) {
             <h1>Tier0 Help Desk</h1>
           </div>
           <div className="who-am-i">
+            <HeaderButton label="Search quality check" onClick={() => setCheckOpen(true)}>
+              <CardiogramIcon />
+            </HeaderButton>
             <Avatar me={me} />
-            <button type="button" className="quiet" onClick={onSignOut}>
-              Sign out
-            </button>
+            <HeaderButton label="Sign out" onClick={onSignOut}>
+              <SignOutIcon />
+            </HeaderButton>
           </div>
         </header>
 
@@ -284,12 +295,13 @@ export function ChatPage({ me, onSignOut, onSessionExpired }: Props) {
             </ol>
             {busy && live === null && (
               <p role="status" className="typing">
+                <AssistantPicture size={28} />
                 <span className="dots" aria-hidden="true">
                   <i />
                   <i />
                   <i />
                 </span>
-                Tier0 is typing…
+                is typing…
               </p>
             )}
             <div ref={endRef} />
@@ -309,7 +321,7 @@ export function ChatPage({ me, onSignOut, onSessionExpired }: Props) {
             panelRef={panelRef}
           />
 
-          <form onSubmit={submit} className="composer">
+          <form onSubmit={submit} className={waitingForChoice ? "composer locked" : "composer"}>
             <label htmlFor="message" className="visually-hidden">
               Message
             </label>
@@ -322,11 +334,13 @@ export function ChatPage({ me, onSignOut, onSessionExpired }: Props) {
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={onKeyDown}
               aria-describedby="composer-hint"
-              placeholder="Ask anything…"
-              disabled={restoring}
+              placeholder={waitingForChoice ? "Choose an option above to continue" : "Ask anything…"}
+              disabled={restoring || waitingForChoice}
             />
             <p id="composer-hint" className="hint">
-              Press Enter to send, Shift+Enter for a new line.
+              {waitingForChoice
+                ? "Please answer the question above to continue."
+                : "Press Enter to send, Shift+Enter for a new line."}
             </p>
             <button type="submit" className="send" disabled={!canSend} aria-label="Send">
               <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false">
@@ -336,6 +350,8 @@ export function ChatPage({ me, onSignOut, onSessionExpired }: Props) {
           </form>
         </main>
       </div>
+
+      {checkOpen && <RetrievalCheck onClose={() => setCheckOpen(false)} />}
     </div>
   );
 }
