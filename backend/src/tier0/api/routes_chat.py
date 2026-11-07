@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import time
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from typing import Annotated
 from uuid import UUID, uuid4
 
@@ -68,8 +68,20 @@ def _event(name: str, data: object) -> str:
     return f"event: {name}\ndata: {json.dumps(data)}\n\n"
 
 
+def _record(request: Request, thread_id: str, email: str, message: str) -> None:
+    """Add the chat to the employee's history. The history is a convenience: never fail a turn."""
+    try:
+        request.app.state.conversations.touch(thread_id, email, message)
+    except Exception:
+        log.warning("could not record the conversation in the history", exc_info=True)
+
+
 def _sse(
-    events: Iterator[TokenEvent | ChatTurn], email: str, message: str, started: float
+    events: Iterator[TokenEvent | ChatTurn],
+    email: str,
+    message: str,
+    started: float,
+    on_done: Callable[[], None],
 ) -> Iterator[str]:
     """Server-sent events: ``token`` pieces as the reply forms, then ``done`` with the turn."""
     try:
@@ -78,6 +90,7 @@ def _sse(
                 yield _event("token", {"text": item.text})
             else:
                 _log_turn(item, message, started)
+                on_done()
                 yield _event("done", to_chat_response(item, email).model_dump(mode="json"))
     except Exception:
         log.exception("chat stream failed")
@@ -109,7 +122,13 @@ def send_message(
                 thread_id=thread_id, requester_email=user.email, message=body.message
             )
             return StreamingResponse(
-                _sse(events, user.email, body.message, started),
+                _sse(
+                    events,
+                    user.email,
+                    body.message,
+                    started,
+                    lambda: _record(request, thread_id, user.email, body.message),
+                ),
                 media_type="text/event-stream",
                 headers=SSE_HEADERS,
             )
@@ -118,6 +137,7 @@ def send_message(
         log.warning("conversation not found or not owned")
         raise HTTPException(status.HTTP_404_NOT_FOUND, NOT_FOUND) from None
     _log_turn(turn, body.message, started)
+    _record(request, thread_id, user.email, body.message)
     return to_chat_response(turn, user.email)
 
 

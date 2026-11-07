@@ -37,7 +37,9 @@ const TEXT: [string, string][] = [
   ["muted", "surface"],
   ["muted", "bg"],
   ["on-primary", "primary"],
-  ["on-bubble-bot", "bubble-bot"],
+  ["text", "row-active"],
+  ["muted", "row-active"],
+  ["text", "row-hover"],
   ["error-text", "error-bg"],
   ["notice-text", "notice-bg"],
   ["link", "surface"],
@@ -70,6 +72,31 @@ describe.each(Object.entries(themes))("%s theme colour contrast", (_name, theme)
 
   it.each(COMPONENTS)("boundary --%s against --%s meets 3:1", (fg, bg) => {
     expect(ratio(colour(theme, fg), colour(theme, bg))).toBeGreaterThanOrEqual(3);
+  });
+});
+
+// The page background is a gradient: text has to read on every colour it passes through.
+function gradientStops(block: string): string[] {
+  const gradient = /--bg-grad:\s*linear-gradient\(([^)]*)\)/.exec(block);
+  return [...(gradient?.[1] ?? "").matchAll(/#[0-9a-fA-F]{6}/g)].map((m) => m[0]);
+}
+
+const gradients = {
+  light: gradientStops(css.slice(css.indexOf(":root"), darkStart)),
+  dark: gradientStops(css.slice(darkStart)),
+};
+
+describe.each(Object.entries(themes))("%s theme page gradient", (name, theme) => {
+  const stops = gradients[name as keyof typeof gradients];
+
+  it("has colour stops to check", () => {
+    expect(stops.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it.each(["text", "muted"])("--%s is readable on every stop", (fg) => {
+    for (const stop of stops) {
+      expect(ratio(colour(theme, fg), stop), `${fg} on ${stop}`).toBeGreaterThanOrEqual(4.5);
+    }
   });
 });
 

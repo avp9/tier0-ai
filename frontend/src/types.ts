@@ -61,6 +61,13 @@ export interface HistoryResponse {
   pending_action: PendingAction | null;
 }
 
+/** One of the signed-in employee's earlier chats, as listed in the history sidebar. */
+export interface Conversation {
+  thread_id: string;
+  title: string;
+  updated_at: string;
+}
+
 export interface Me {
   email: string;
   display_name: string;

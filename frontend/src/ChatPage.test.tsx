@@ -476,7 +476,7 @@ describe("coming back to a conversation", () => {
     expect(screen.getByText("Does BuzzTech pay for gyms?")).toBeVisible();
     expect(screen.getByText("Shall I raise a ticket?")).toBeVisible();
     expect(screen.getByRole("button", { name: "Yes, raise a ticket" })).toBeVisible();
-    expect(calls).toHaveLength(1);
+    expect(calls.filter((c) => c.path.startsWith("/api/chat/"))).toHaveLength(1);
   });
 
   it("starts fresh if the stored conversation is gone", async () => {
@@ -500,7 +500,7 @@ describe("coming back to a conversation", () => {
     const { user } = renderChat();
     await say(user, "first topic");
     await screen.findByText("Here is the answer.");
-    await user.click(screen.getByRole("button", { name: "New conversation" }));
+    await user.click(screen.getByRole("button", { name: "New chat" }));
     expect(screen.queryByText("first topic")).not.toBeInTheDocument();
     expect(sessionStorage.getItem("tier0.thread")).toBeNull();
     await say(user, "second topic");
@@ -624,7 +624,8 @@ describe("streaming the answer", () => {
     const { user } = renderChat();
     await say(user, "hello");
     expect(await within(conversation()).findByText("Whole.")).toBeVisible();
-    const init = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    const post = fetchMock.mock.calls.find(([, init]) => init?.method === "POST");
+    const init = post?.[1] as RequestInit;
     expect((init.headers as Record<string, string>).Accept).toContain(
       "text/event-stream",
     );
@@ -688,5 +689,164 @@ describe("streaming the answer", () => {
     ).closest("li");
     expect(live).toHaveAttribute("aria-live", "off");
     stream.done(chatReply({ reply: "Typing along" }));
+  });
+});
+
+describe("the chat history", () => {
+  // By calendar day, so the day headings do not depend on the time the suite happens to run.
+  const now = new Date();
+  const daysAgo = (days: number) =>
+    new Date(now.getFullYear(), now.getMonth(), now.getDate() - days, 12).toISOString();
+  const OTHER = "22222222-2222-4222-8222-222222222222";
+  const saved = [
+    { thread_id: THREAD, title: "How do I set up the VPN?", updated_at: now.toISOString() },
+    { thread_id: OTHER, title: "Monitor flickers when docked", updated_at: daysAgo(1) },
+  ];
+  const earlierChat = {
+    thread_id: OTHER,
+    messages: [
+      { role: "user", content: "Monitor flickers when docked" },
+      { role: "assistant", content: "Try updating the dock firmware." },
+    ],
+    pending_action: null,
+  };
+  const sidebar = () => screen.getByRole("complementary", { name: "Chat history" });
+
+  it("lists earlier chats under day headings, in the order the server sent them", async () => {
+    stubApi({ "GET /api/conversations": () => json(saved) });
+    renderChat();
+    const links = await within(sidebar()).findAllByRole("link");
+    expect(links.map((l) => l.textContent)).toEqual([
+      "How do I set up the VPN?",
+      "Monitor flickers when docked",
+    ]);
+    expect(within(sidebar()).getByRole("heading", { name: "Today" })).toBeVisible();
+    expect(within(sidebar()).getByRole("heading", { name: "Yesterday" })).toBeVisible();
+  });
+
+  it("says so when there are no earlier chats", async () => {
+    stubApi({});
+    renderChat();
+    expect(await within(sidebar()).findByText("Your conversations will appear here.")).toBeVisible();
+  });
+
+  it("opens an earlier chat when it is clicked, and marks it as the current one", async () => {
+    stubApi({
+      "GET /api/conversations": () => json(saved),
+      [`GET /api/chat/${OTHER}`]: () => json(earlierChat),
+    });
+    const { user } = renderChat();
+    await user.click(await within(sidebar()).findByRole("link", { name: "Monitor flickers when docked" }));
+    expect(await within(conversation()).findByText("Try updating the dock firmware.")).toBeVisible();
+    expect(within(sidebar()).getByRole("link", { name: "Monitor flickers when docked" })).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
+    expect(within(sidebar()).getByRole("link", { name: "How do I set up the VPN?" })).not.toHaveAttribute(
+      "aria-current",
+    );
+    expect(sessionStorage.getItem("tier0.thread")).toBe(OTHER); // a reload comes back to it
+  });
+
+  it("continues the chat that was opened, not a new one", async () => {
+    const { sentMessages } = stubApi({
+      "GET /api/conversations": () => json(saved),
+      [`GET /api/chat/${OTHER}`]: () => json(earlierChat),
+      "POST /api/chat": () => json(chatReply({ thread_id: OTHER })),
+    });
+    const { user } = renderChat();
+    await user.click(await within(sidebar()).findByRole("link", { name: "Monitor flickers when docked" }));
+    await within(conversation()).findByText("Try updating the dock firmware.");
+    await say(user, "it still flickers");
+    await waitFor(() => expect(sentMessages()).toHaveLength(1));
+    expect(sentMessages()[0]?.body).toEqual({ message: "it still flickers", thread_id: OTHER });
+  });
+
+  it("New chat clears the screen and the current marker", async () => {
+    stubApi({
+      "GET /api/conversations": () => json(saved),
+      [`GET /api/chat/${OTHER}`]: () => json(earlierChat),
+    });
+    const { user } = renderChat();
+    await user.click(await within(sidebar()).findByRole("link", { name: "Monitor flickers when docked" }));
+    await within(conversation()).findByText("Try updating the dock firmware.");
+    await user.click(screen.getByRole("button", { name: "New chat" }));
+    expect(within(conversation()).queryByText("Try updating the dock firmware.")).not.toBeInTheDocument();
+    expect(within(sidebar()).queryByRole("link", { current: true })).toBeNull();
+    expect(sessionStorage.getItem("tier0.thread")).toBeNull();
+  });
+
+  it("adds the chat to the list after a reply", async () => {
+    let listed = 0;
+    stubApi({
+      "GET /api/conversations": () => json(listed++ === 0 ? [] : saved.slice(0, 1)),
+      "POST /api/chat": () => json(chatReply({ thread_id: THREAD })),
+    });
+    const { user } = renderChat();
+    await within(sidebar()).findByText("Your conversations will appear here.");
+    await say(user, "How do I set up the VPN?");
+    expect(await within(sidebar()).findByRole("link", { name: "How do I set up the VPN?" })).toBeVisible();
+  });
+
+  it("does not switch chats while a reply is on its way", async () => {
+    let release: (r: Response) => void = () => undefined;
+    const { calls } = stubApi({
+      "GET /api/conversations": () => json(saved),
+      "POST /api/chat": () => new Promise<Response>((resolve) => (release = resolve)),
+    });
+    const { user } = renderChat();
+    const link = await within(sidebar()).findByRole("link", { name: "Monitor flickers when docked" });
+    await say(user, "hello");
+    await screen.findByText("Tier0 is typing…");
+    expect(link).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByRole("button", { name: "New chat" })).toBeDisabled();
+    await user.click(link);
+    expect(calls.some((c) => c.path === `/api/chat/${OTHER}`)).toBe(false);
+    release(json(chatReply()));
+  });
+
+  it("still chats when the history cannot be loaded", async () => {
+    stubApi({
+      "GET /api/conversations": () => json({ detail: "boom" }, 500),
+      "POST /api/chat": () => json(chatReply({ reply: "Still here." })),
+    });
+    const { user } = renderChat();
+    await say(user, "hello");
+    expect(await within(conversation()).findByText("Still here.")).toBeVisible();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("says so, and refreshes the list, when a chat can no longer be opened", async () => {
+    let listed = 0;
+    stubApi({
+      "GET /api/conversations": () => json(listed++ === 0 ? saved : saved.slice(0, 1)),
+      [`GET /api/chat/${OTHER}`]: () => json({ detail: "Conversation not found" }, 404),
+    });
+    const { user } = renderChat();
+    await user.click(await within(sidebar()).findByRole("link", { name: "Monitor flickers when docked" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("could not be opened");
+    await waitFor(() =>
+      expect(within(sidebar()).queryByRole("link", { name: "Monitor flickers when docked" })).not.toBeInTheDocument(),
+    );
+  });
+
+  it("can be hidden and shown again", async () => {
+    stubApi({ "GET /api/conversations": () => json(saved) });
+    const { user } = renderChat();
+    await within(sidebar()).findAllByRole("link");
+    await user.click(screen.getByRole("button", { name: "Hide chat history" }));
+    expect(screen.queryByRole("complementary", { name: "Chat history" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Show chat history" }));
+    expect(await within(sidebar()).findAllByRole("link")).toHaveLength(2);
+  });
+
+  it("shows a chat's title as text, never as markup", async () => {
+    stubApi({
+      "GET /api/conversations": () =>
+        json([{ thread_id: THREAD, title: "<img src=x onerror=alert(1)>", updated_at: now.toISOString() }]),
+    });
+    renderChat();
+    const link = await within(sidebar()).findByRole("link", { name: "<img src=x onerror=alert(1)>" });
+    expect(link.querySelector("img")).toBeNull();
   });
 });

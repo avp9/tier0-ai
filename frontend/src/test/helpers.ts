@@ -11,7 +11,9 @@ export const json = (body: unknown, status = 200, headers: Record<string, string
 export const noContent = () => new Response(null, { status: 204 });
 
 /** Replace fetch with a router keyed by "METHOD /path"; anything unexpected fails the test. */
-export function stubApi(routes: Record<string, Handler>) {
+export function stubApi(overrides: Record<string, Handler>) {
+  // Every chat page loads the chat history list; most tests do not care about it.
+  const routes: Record<string, Handler> = { "GET /api/conversations": () => json([]), ...overrides };
   const calls: { method: string; path: string; body: unknown }[] = [];
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const path = String(input);

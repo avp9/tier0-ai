@@ -17,6 +17,7 @@ from tier0.agent.service import AgentService
 from tier0.api.limits import BodyLimitMiddleware
 from tier0.api.routes_auth import router as auth_router
 from tier0.api.routes_chat import router as chat_router
+from tier0.api.routes_conversations import router as conversations_router
 from tier0.api.routes_e2e import router as e2e_router
 from tier0.api.routes_health import database_check, migrations_check
 from tier0.api.routes_health import router as health_router
@@ -25,6 +26,7 @@ from tier0.auth.ratelimit import LoginRateLimiter, SlidingWindowLimiter
 from tier0.auth.sessions import SessionCodec
 from tier0.auth.users import UserStore, seed_demo_users
 from tier0.config import Settings
+from tier0.conversations import ConversationStore
 from tier0.db.migrate import upgrade_with_lock
 from tier0.observability.context import start_request
 from tier0.observability.logs import configure_logging
@@ -60,6 +62,7 @@ def create_app(
             app.state.settings = settings
             app.state.pool = active
             app.state.users = users
+            app.state.conversations = ConversationStore(active)
             app.state.codec = SessionCodec(
                 settings.session_secret.get_secret_value(), settings.session_max_age_hours * 3600
             )
@@ -151,6 +154,7 @@ def create_app(
     app.include_router(health_router)
     app.include_router(auth_router)
     app.include_router(chat_router)
+    app.include_router(conversations_router)
     if settings.e2e_controls_enabled:
         app.include_router(e2e_router)
     _serve_frontend(app, settings)  # last: its catch-all route must not shadow the API
