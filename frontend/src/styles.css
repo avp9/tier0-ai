@@ -175,7 +175,11 @@ label {
 }
 
 /* Chat: a history panel beside the conversation, each a white card on the lavender page. */
+/* Pinned to the window, so the page itself can never scroll: only the conversation and the
+   history list do. */
 .app {
+  position: fixed;
+  inset: 0 0 auto 0;
   display: flex;
   gap: 16px;
   height: 100dvh;
