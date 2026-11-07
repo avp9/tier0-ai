@@ -42,6 +42,7 @@ class BuiltAgent:
     service: AgentService
     index_check: Callable[[], bool]
     controls: FakeControls | None = None
+    retriever: Retriever | None = None
 
 
 @dataclass(frozen=True)
@@ -159,4 +160,9 @@ def build_agent_from_settings(
     def index_check() -> bool:
         return open_collection(index_dir).count() > 0
 
-    return BuiltAgent(service=service, index_check=index_check, controls=parts.controls)
+    return BuiltAgent(
+        service=service,
+        index_check=index_check,
+        controls=parts.controls,
+        retriever=parts.retriever,
+    )

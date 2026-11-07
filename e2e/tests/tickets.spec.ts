@@ -58,11 +58,19 @@ test("AT-08 an ambiguous confirmation is clarified and creates nothing yet", asy
   controls,
 }) => {
   await reachPreview(page);
-  await say(page, "hmm maybe");
-  await expect(conversation(page)).toContainText("I need a clear answer");
+  // The text box is locked at a preview, so an unclear reply can only arrive from outside the
+  // page. The server must still refuse to guess.
+  await expect(page.getByRole("textbox", { name: /message/i })).toBeDisabled();
+  const thread = await page.evaluate(() => sessionStorage.getItem("tier0.thread"));
+  const unclear = await page.request.post("/api/chat", {
+    data: { thread_id: thread, message: "hmm maybe" },
+  });
+  expect(unclear.ok()).toBe(true);
+  expect(((await unclear.json()) as { reply: string }).reply).toContain("I need a clear answer");
   expect(await controls.tickets()).toEqual([]);
+  await page.reload();
   await expect(page.getByRole("region", { name: "Ticket to be created" })).toBeVisible();
-  await say(page, "yes please");
+  await page.getByRole("button", { name: "Create ticket" }).click();
   await expect(page.getByRole("group", { name: "Created ticket" })).toBeVisible();
   expect(await controls.tickets()).toHaveLength(1);
 });

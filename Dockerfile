@@ -41,6 +41,10 @@ WORKDIR /app
 FROM runtime AS e2e
 COPY backend/scripts /app/scripts
 COPY data/fixtures /app/data/fixtures
+# The questions behind the header's search check. (Against the fixture knowledge base most answers
+# miss, which is fine: the e2e tests only look at how the result is shown.)
+COPY data/evaluation /app/data/evaluation
+ENV EVALUATION_DIR=/app/data/evaluation
 RUN python scripts/build_index.py --embedder fake --kb-dir /app/data/fixtures \
         --index-dir /app/data/chroma \
     && chown -R tier0 /app/data

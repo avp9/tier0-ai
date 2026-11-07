@@ -18,6 +18,7 @@ from tier0.api.limits import BodyLimitMiddleware
 from tier0.api.routes_auth import router as auth_router
 from tier0.api.routes_chat import router as chat_router
 from tier0.api.routes_conversations import router as conversations_router
+from tier0.api.routes_diagnostics import router as diagnostics_router
 from tier0.api.routes_e2e import router as e2e_router
 from tier0.api.routes_health import database_check, migrations_check
 from tier0.api.routes_health import router as health_router
@@ -30,6 +31,7 @@ from tier0.conversations import ConversationStore
 from tier0.db.migrate import upgrade_with_lock
 from tier0.observability.context import start_request
 from tier0.observability.logs import configure_logging
+from tier0.rag.diagnostics import REPO_EVALUATION_DIR, RetrievalDiagnostics
 from tier0.rag.indexer import IndexNotFoundError
 from tier0.rag.retriever import IndexMismatchError
 
@@ -43,11 +45,13 @@ def create_app(
     *,
     pool: ConnectionPool | None = None,
     agent: AgentService | None = None,
+    diagnostics: RetrievalDiagnostics | None = None,
 ) -> FastAPI:
     """Build the web application.
 
     Pass ``pool`` to share one (the caller then closes it) and ``agent`` to use a ready-made
-    agent instead of building the real one from the settings.
+    agent instead of building the real one from the settings, and ``diagnostics`` likewise for
+    the search check.
     """
 
     @asynccontextmanager
@@ -77,12 +81,22 @@ def create_app(
                 "migrations": partial(migrations_check, active),
             }
             app.state.agent = agent
+            app.state.diagnostics = diagnostics
             app.state.e2e_controls = None
             if agent is None:
                 built = _build_agent(settings, active)
                 app.state.agent = built.service if built else None
                 if built is not None:
                     app.state.e2e_controls = built.controls
+                    if built.retriever is not None:
+                        app.state.diagnostics = RetrievalDiagnostics(
+                            built.retriever,
+                            Path(settings.evaluation_dir)
+                            if settings.evaluation_dir
+                            else REPO_EVALUATION_DIR,
+                            current_threshold=settings.retrieval_score_threshold,
+                            embedding_model=settings.embedding_model,
+                        )
                     checks["knowledge_index"] = built.index_check
             app.state.readiness_checks = checks
             yield
@@ -155,6 +169,7 @@ def create_app(
     app.include_router(auth_router)
     app.include_router(chat_router)
     app.include_router(conversations_router)
+    app.include_router(diagnostics_router)
     if settings.e2e_controls_enabled:
         app.include_router(e2e_router)
     _serve_frontend(app, settings)  # last: its catch-all route must not shadow the API

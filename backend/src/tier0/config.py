@@ -66,6 +66,9 @@ class Settings(BaseSettings):
     vector_store_path: str = ".data/chroma"
     retrieval_top_k: int = Field(default=5, ge=1, le=20)
     retrieval_score_threshold: float = Field(default=0.30, ge=0.0, le=1.0)
+    # Folder with retrieval_cases.json and knowledge_gaps.json for the search check in the header.
+    # Empty means <repo>/data/evaluation, which exists when running from a checkout.
+    evaluation_dir: str = ""
     jira_server: str | None = None
     jira_username: str | None = None
     jira_api_token: SecretStr | None = None

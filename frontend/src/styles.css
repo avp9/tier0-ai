@@ -322,9 +322,18 @@ label {
   padding: 0 14px;
 }
 
-.quiet {
+.header-button {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  padding: 0;
   border-color: transparent;
+  color: var(--text);
   box-shadow: var(--card-shadow);
+}
+
+.who-am-i .header-button {
+  padding: 0; /* outranks ".who-am-i button" */
 }
 
 .avatar-wrap {
@@ -545,6 +554,11 @@ label {
   color: var(--muted);
 }
 
+.typing .speaker {
+  width: 28px;
+  height: 28px;
+}
+
 .dots {
   display: inline-flex;
   gap: 4px;
@@ -698,6 +712,22 @@ label {
   outline-offset: 2px;
 }
 
+/* Waiting for a choice on the buttons above: the box is greyed out and cannot be typed in. */
+.composer.locked {
+  background: var(--row-hover);
+  box-shadow: none;
+  outline: 1px dashed var(--line);
+}
+
+.composer textarea:disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.composer.locked .hint {
+  font-weight: 600;
+}
+
 .composer textarea {
   grid-area: box;
   padding: 4px 0;
@@ -751,5 +781,219 @@ label {
 
   .composer {
     margin-bottom: calc(8px + env(safe-area-inset-bottom));
+  }
+}
+
+/* The search-quality check: a dialog over the page. */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgb(20 18 40 / 0.45);
+}
+
+.modal {
+  display: flex;
+  flex-direction: column;
+  width: min(760px, 100%);
+  max-height: min(92dvh, 900px);
+  border-radius: 20px;
+  background: var(--surface);
+  box-shadow: 0 12px 48px rgb(20 10 80 / 0.3);
+}
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 8px 24px;
+}
+
+.modal-head h2 {
+  font-size: 1.375rem;
+  font-weight: 600;
+}
+
+.modal-body {
+  padding: 0 24px 24px;
+  overflow-y: auto;
+}
+
+.modal-body h3 {
+  margin: 24px 0 8px;
+  font-size: 1rem;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.check-meta {
+  margin: 0 0 12px;
+  font-size: 0.875rem;
+}
+
+.check-summary {
+  margin: 0;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--notice-bg);
+  color: var(--notice-text);
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.metric {
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+
+.metric-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.metric-value {
+  margin: 2px 0 6px;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.bar {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--row-active);
+}
+
+.bar span {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--primary);
+}
+
+.check-lines {
+  margin: 12px 0 0;
+}
+
+.check-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 16px;
+  align-items: baseline;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.check-line dt {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.check-line dd {
+  margin: 0;
+  text-align: right;
+}
+
+.check-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.check-table th,
+.check-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  text-align: right;
+}
+
+.check-table th:first-child {
+  text-align: left;
+}
+
+.check-table thead th {
+  color: var(--muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.check-misses {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.check-misses li {
+  margin: 4px 0;
+}
+
+.check-actions {
+  margin-top: 20px;
+}
+
+/* A small "?" that explains a term in one line. */
+.help {
+  position: relative;
+  display: inline-flex;
+}
+
+.help-button {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  min-height: 20px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.help-tip {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  z-index: 5;
+  width: max-content;
+  max-width: min(280px, 70vw);
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--card-shadow);
+  font-size: 0.8125rem;
+  font-weight: 400;
+  text-align: left;
+  transform: translateX(-50%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.help:hover .help-tip,
+.help:focus-within .help-tip,
+.help.open .help-tip {
+  opacity: 1;
+}
+
+@media (max-width: 560px) {
+  .metrics {
+    grid-template-columns: repeat(2, 1fr);
   }
 }

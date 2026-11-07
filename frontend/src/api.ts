@@ -1,4 +1,11 @@
-import type { ChatResponse, Conversation, HistoryResponse, Me, TicketEdit } from "./types";
+import type {
+  ChatResponse,
+  Conversation,
+  HistoryResponse,
+  Me,
+  RetrievalReport,
+  TicketEdit,
+} from "./types";
 
 export const MAX_MESSAGE_CHARS = 2000;
 
@@ -163,6 +170,9 @@ export const api = {
   editTicket: (ticketEdit: TicketEdit, threadId: string) =>
     sendChat({ ticket_edit: ticketEdit }, threadId, () => {}),
   conversations: () => request<Conversation[]>("/api/conversations"),
+  /** How well the knowledge-base search finds the right article. ``refresh`` runs it again. */
+  retrievalReport: (refresh = false) =>
+    request<RetrievalReport>(`/api/diagnostics/retrieval${refresh ? "?refresh=true" : ""}`),
   history: (threadId: string) => request<HistoryResponse>(`/api/chat/${encodeURIComponent(threadId)}`),
 };
 

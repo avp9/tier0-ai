@@ -86,3 +86,37 @@ export interface Me {
   display_name: string;
   gender?: "male" | "female" | null;
 }
+
+/** The search-quality report: the output of the retrieval evaluation, as data. */
+export interface RankMetric {
+  k: number;
+  hit: number;
+  recall: number;
+}
+
+export interface RetrievalReport {
+  generated_at: string;
+  duration_s: number;
+  embedding_model: string;
+  cases: number;
+  gap_questions: number;
+  ranks: RankMetric[];
+  mrr: number;
+  by_kind: { kind: string; hit: RankMetric[] }[];
+  misses_at: number;
+  misses: { id: string; query: string }[];
+  separation: {
+    answerable_min: number;
+    answerable_median: number;
+    gap_max: number;
+    gap_median: number;
+    separable: boolean;
+  };
+  threshold: {
+    current: number;
+    suggested: number;
+    answerable_kept: number;
+    gaps_rejected: number;
+    separable: boolean;
+  };
+}
