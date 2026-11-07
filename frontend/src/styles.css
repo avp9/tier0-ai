@@ -541,6 +541,33 @@ label {
   border-radius: 12px;
 }
 
+.rating {
+  display: flex;
+  gap: 4px;
+}
+
+.rating .rating-button {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  min-height: 32px;
+  height: 32px;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+}
+
+.rating .rating-button:hover {
+  background: var(--row-hover);
+}
+
+.rating .rating-button[aria-pressed="true"] {
+  border-color: var(--primary);
+  background: var(--row-active);
+  color: var(--link);
+}
+
 .cache-note {
   display: inline-flex;
   align-items: center;

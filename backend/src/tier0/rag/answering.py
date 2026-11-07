@@ -7,6 +7,7 @@ from enum import StrEnum
 from pydantic import BaseModel, Field, ValidationError
 
 from tier0.llm.base import ChatModel, LLMError, StreamingChatModel
+from tier0.observability.tracing import note, traced
 from tier0.rag.answerability import (
     AnswerabilityConfig,
     AnswerabilityDecision,
@@ -79,6 +80,18 @@ class AnswerService:
         self._config = config or AnswerabilityConfig()
         self._cache = cache
 
+    @traced(
+        run_type="chain",
+        name="answer_question",
+        process_inputs=lambda inputs: {"question": inputs.get("question")},
+        process_outputs=lambda result: {
+            "outcome": result.outcome.value,
+            "cached": result.cached,
+            "reply": result.reply,
+            "sources": [source.document_id for source in result.sources],
+            "retrieved": result.retrieved_ids,
+        },
+    )
     def answer(self, question: str, on_token: Callable[[str], None] | None = None) -> AnswerResult:
         """Answer from the knowledge base. ``on_token`` gets the reply text as it is written."""
         vector: list[float] | None = None
@@ -151,6 +164,7 @@ class AnswerService:
             return None
         if stored is None:
             log.info("semantic cache miss", extra={"fields": {"step": step}})
+            note(**{f"semantic_cache_{step}": "miss"})
             return None
         try:
             sources = [Source.model_validate(s) for s in stored.sources]
@@ -158,6 +172,7 @@ class AnswerService:
             log.warning("semantic cache entry could not be read; answering normally")
             return None
         log.info("semantic cache hit", extra={"fields": {"step": step, "sources": len(sources)}})
+        note(semantic_cache=f"hit ({step})")
         return AnswerResult(
             outcome=Outcome.ANSWERED, reply=stored.reply, sources=sources, cached=True
         )

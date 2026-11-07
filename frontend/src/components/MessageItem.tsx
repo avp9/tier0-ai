@@ -1,6 +1,6 @@
 import assistantAvatar from "../assets/tier0-avatar.png";
 import { safeHttpUrl } from "../safeUrl";
-import type { Me, Role, Source, TicketRef } from "../types";
+import type { Me, Role, Source, TicketRef, Vote } from "../types";
 import { Headshot } from "./Avatar";
 
 export interface Item {
@@ -10,6 +10,49 @@ export interface Item {
   sources: Source[];
   ticket: TicketRef | null;
   cached?: boolean;
+  /** To rate this answer; only finished answers have one. */
+  feedbackToken?: string | null;
+  vote?: Vote | null;
+}
+
+function Thumb({ up }: { up: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+      <path
+        d={
+          up
+            ? "M7 11v9H4v-9zM7 11l4-8a2 2 0 0 1 2 2v4h5.5a2 2 0 0 1 2 2.3l-1.2 6A2 2 0 0 1 17.3 20H7"
+            : "M7 13V4H4v9zM7 13l4 8a2 2 0 0 0 2-2v-4h5.5a2 2 0 0 0 2-2.3l-1.2-6A2 2 0 0 0 17.3 4H7"
+        }
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+/** Thumbs up and down under an answer. Pressing the chosen one again takes the rating back. */
+function Rating({ vote, onVote }: { vote: Vote | null; onVote: (vote: Vote | null) => void }) {
+  return (
+    <div className="rating" role="group" aria-label="Rate this answer">
+      {(["up", "down"] as const).map((kind) => (
+        <button
+          key={kind}
+          type="button"
+          className="rating-button"
+          aria-pressed={vote === kind}
+          aria-label={kind === "up" ? "Good answer" : "Bad answer"}
+          title={kind === "up" ? "Good answer" : "Bad answer"}
+          onClick={() => onVote(vote === kind ? null : kind)}
+        >
+          <Thumb up={kind === "up"} />
+        </button>
+      ))}
+    </div>
+  );
 }
 
 function CreatedTicket({ ticket }: { ticket: TicketRef }) {
@@ -56,10 +99,12 @@ export function MessageItem({
   item,
   gender,
   live = false,
+  onVote,
 }: {
   item: Item;
   gender?: Me["gender"];
   live?: boolean;
+  onVote?: (item: Item, vote: Vote | null) => void;
 }) {
   const mine = item.role === "user";
   return (
@@ -90,7 +135,10 @@ export function MessageItem({
             Answered from cache
           </span>
         )}
-      {item.ticket && <CreatedTicket ticket={item.ticket} />}
+        {item.ticket && <CreatedTicket ticket={item.ticket} />}
+        {!mine && !live && item.feedbackToken && onVote && (
+          <Rating vote={item.vote ?? null} onVote={(vote) => onVote(item, vote)} />
+        )}
       </div>
     </li>
   );

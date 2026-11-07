@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import threading
+import uuid
 from collections.abc import Iterator
 from dataclasses import dataclass
 from enum import StrEnum
@@ -14,6 +15,7 @@ from pydantic import BaseModel, Field
 from tier0.agent.graph import STREAM_TOKENS, AgentDependencies, build_conversation_graph
 from tier0.agent.state import PendingTicket, WorkflowStatus
 from tier0.intent.types import IntentResult, Turn
+from tier0.observability.tracing import Tracing
 from tier0.rag.answering import Source
 from tier0.tickets.drafting import TicketEdit
 from tier0.tickets.models import CreatedTicket, TicketSummary, validate_email
@@ -55,6 +57,7 @@ class ChatTurn(BaseModel):
     preview: str | None = None
     editable: bool = False  # the preview can still be changed (nothing has been sent yet)
     cached: bool = False  # the reply was reused from an earlier, similar question
+    trace_id: str | None = None  # identifies this turn (its LangSmith run, and what a vote is for)
     sources: list[Source] = Field(default_factory=list)
     created_ticket: CreatedTicket | None = None
     intent: IntentResult | None = None
@@ -81,8 +84,11 @@ class ThreadView(BaseModel):
 class AgentService:
     """Send one employee message and get the agent's reply, resuming a paused conversation."""
 
-    def __init__(self, graph: CompiledStateGraph[Any, Any, Any, Any]) -> None:
+    def __init__(
+        self, graph: CompiledStateGraph[Any, Any, Any, Any], tracing: Tracing | None = None
+    ) -> None:
         self._graph = graph
+        self._tracing = tracing
         # One lock per stripe of threads: two messages on the same conversation never run at once.
         self._locks = [threading.Lock() for _ in range(LOCK_STRIPES)]
 
@@ -105,6 +111,23 @@ class AgentService:
         if owner and str(owner).lower() != email:
             raise ThreadOwnershipError(thread_id)
         return snapshot
+
+    def _run_config(
+        self, thread_id: str, user_id: str | None, *, stream_tokens: bool = False
+    ) -> tuple[Any, str]:
+        """How to run the graph for this turn, and the id that names the turn.
+
+        Every turn has an id (a vote on an answer refers to it); with tracing on it is also the id
+        of the LangSmith run, and the run carries the conversation, the tracer and its labels.
+        """
+        trace_id = str(uuid.uuid4())
+        configurable: dict[str, Any] = {"thread_id": thread_id}
+        if stream_tokens:
+            configurable[STREAM_TOKENS] = True
+        config: dict[str, Any] = {"configurable": configurable, "run_id": uuid.UUID(trace_id)}
+        if self._tracing is not None:
+            config.update(self._tracing.config(thread_id=thread_id, user_id=user_id))
+        return config, trace_id
 
     @staticmethod
     def _input(snapshot: Any, email: str, text: str, edit: TicketEdit | None = None) -> Any:
@@ -131,16 +154,18 @@ class AgentService:
         requester_email: str,
         message: str = "",
         ticket_edit: TicketEdit | None = None,
+        user_id: str | None = None,
     ) -> ChatTurn:
         email, text = self._clean(requester_email, message, needs_text=ticket_edit is None)
         config: Any = {"configurable": {"thread_id": thread_id}}
+        run_config, trace_id = self._run_config(thread_id, user_id)
         with self._lock_for(thread_id):
             snapshot = self._check_owner(config, email, thread_id)
             if ticket_edit is not None:
                 self._check_edit(snapshot)
-            result = self._graph.invoke(self._input(snapshot, email, text, ticket_edit), config)
+            result = self._graph.invoke(self._input(snapshot, email, text, ticket_edit), run_config)
             saved = dict(self._graph.get_state(config).values)
-        return self._turn(thread_id, saved, result.get("__interrupt__"))
+        return self._turn(thread_id, saved, result.get("__interrupt__"), trace_id)
 
     def stream(
         self,
@@ -149,6 +174,7 @@ class AgentService:
         requester_email: str,
         message: str = "",
         ticket_edit: TicketEdit | None = None,
+        user_id: str | None = None,
     ) -> Iterator[TokenEvent | ChatTurn]:
         """Like ``send``, but yields the reply text as it is written, then the finished turn.
 
@@ -159,24 +185,30 @@ class AgentService:
         snapshot = self._check_owner({"configurable": {"thread_id": thread_id}}, email, thread_id)
         if ticket_edit is not None:
             self._check_edit(snapshot)
-        return self._events(thread_id, email, text, ticket_edit)
+        return self._events(thread_id, email, text, ticket_edit, user_id)
 
     def _events(
-        self, thread_id: str, email: str, text: str, ticket_edit: TicketEdit | None = None
+        self,
+        thread_id: str,
+        email: str,
+        text: str,
+        ticket_edit: TicketEdit | None = None,
+        user_id: str | None = None,
     ) -> Iterator[TokenEvent | ChatTurn]:
         config: Any = {"configurable": {"thread_id": thread_id, STREAM_TOKENS: True}}
+        run_config, trace_id = self._run_config(thread_id, user_id, stream_tokens=True)
         with self._lock_for(thread_id):
             snapshot = self._check_owner(config, email, thread_id)
             if ticket_edit is not None:
                 self._check_edit(snapshot)  # the state may have moved on since the request began
             for chunk in self._graph.stream(
-                self._input(snapshot, email, text, ticket_edit), config, stream_mode="custom"
+                self._input(snapshot, email, text, ticket_edit), run_config, stream_mode="custom"
             ):
                 token = chunk.get("token") if isinstance(chunk, dict) else None
                 if token:
                     yield TokenEvent(text=str(token))
             final = self._graph.get_state(config)
-            turn = self._turn(thread_id, dict(final.values), final.interrupts)
+            turn = self._turn(thread_id, dict(final.values), final.interrupts, trace_id)
         yield turn
 
     def history(self, *, thread_id: str, requester_email: str) -> ThreadView:
@@ -192,10 +224,13 @@ class AgentService:
         return ThreadView(thread_id=thread_id, messages=saved.get("turns", []), pending=pending)
 
     @staticmethod
-    def _turn(thread_id: str, result: dict[str, Any], waiting: Any) -> ChatTurn:
+    def _turn(
+        thread_id: str, result: dict[str, Any], waiting: Any, trace_id: str | None = None
+    ) -> ChatTurn:
         """Build the reply from the saved state, so it matches what a restart would see."""
         base: dict[str, Any] = {
             "thread_id": thread_id,
+            "trace_id": trace_id,
             "sources": result.get("sources") or [],
             "cached": bool(result.get("answer_cached", False)),
             "created_ticket": result.get("created_ticket"),
@@ -217,5 +252,9 @@ class AgentService:
         return ChatTurn(reply=result.get("reply", ""), **base)
 
 
-def build_agent(deps: AgentDependencies, checkpointer: BaseCheckpointSaver[Any]) -> AgentService:
-    return AgentService(build_conversation_graph(deps, checkpointer))
+def build_agent(
+    deps: AgentDependencies,
+    checkpointer: BaseCheckpointSaver[Any],
+    tracing: Tracing | None = None,
+) -> AgentService:
+    return AgentService(build_conversation_graph(deps, checkpointer), tracing)

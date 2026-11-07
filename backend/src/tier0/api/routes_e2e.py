@@ -78,6 +78,7 @@ def reset(request: Request, found: Controls) -> dict[str, str]:
     request.app.state.conversations.clear()
     if found.cache:
         found.cache.clear()
+    request.app.state.feedback.delete_all()
     if found.chat:
         found.chat.fail_next(0)
     if found.classifier:
@@ -90,6 +91,15 @@ def reset(request: Request, found: Controls) -> dict[str, str]:
         settings.login_window_minutes * 60,
     )
     return {"status": "reset"}
+
+
+@router.get("/feedback")
+def list_feedback(request: Request, _found: Controls) -> list[dict[str, object]]:
+    """The votes cast so far, for the browser tests."""
+    return [
+        {"trace_id": v.trace_id, "vote": "up" if v.good else "down", "comment": v.comment}
+        for v in request.app.state.feedback.all()
+    ]
 
 
 @router.get("/tickets")

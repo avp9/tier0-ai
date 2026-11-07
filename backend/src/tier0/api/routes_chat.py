@@ -12,6 +12,7 @@ from fastapi.responses import StreamingResponse
 
 from tier0.agent.service import (
     AgentService,
+    Awaiting,
     ChatTurn,
     EditNotAllowed,
     NothingToEdit,
@@ -27,6 +28,7 @@ from tier0.api.schemas import (
     to_history_response,
 )
 from tier0.auth.users import User
+from tier0.feedback import issue_token
 from tier0.observability.context import bind_thread
 
 log = logging.getLogger(__name__)
@@ -85,9 +87,19 @@ def _record(request: Request, thread_id: str, email: str, message: str) -> None:
         log.warning("could not record the conversation in the history", exc_info=True)
 
 
+def _render(request: Request, turn: ChatTurn, email: str) -> ChatResponse:
+    """The reply as the browser gets it, with the means to vote on it if it is a finished answer."""
+    response = to_chat_response(turn, email)
+    finished = turn.awaiting is None or turn.awaiting is Awaiting.OFFER_TICKET
+    if turn.trace_id and turn.reply and finished:
+        secret = request.app.state.settings.session_secret.get_secret_value()
+        response.feedback_token = issue_token(secret, turn.trace_id, email)
+    return response
+
+
 def _sse(
     events: Iterator[TokenEvent | ChatTurn],
-    email: str,
+    render: Callable[[ChatTurn], ChatResponse],
     message: str,
     started: float,
     on_done: Callable[[], None],
@@ -100,7 +112,7 @@ def _sse(
             else:
                 _log_turn(item, message, started)
                 on_done()
-                yield _event("done", to_chat_response(item, email).model_dump(mode="json"))
+                yield _event("done", render(item).model_dump(mode="json"))
     except Exception:
         log.exception("chat stream failed")
         yield _event("error", {"detail": STREAM_FAILED})
@@ -133,11 +145,12 @@ def send_message(
                 requester_email=user.email,
                 message=text,
                 ticket_edit=body.ticket_edit,
+                user_id=str(user.id),
             )
             return StreamingResponse(
                 _sse(
                     events,
-                    user.email,
+                    lambda turn: _render(request, turn, user.email),
                     text,
                     started,
                     lambda: _record(request, thread_id, user.email, text),
@@ -150,6 +163,7 @@ def send_message(
             requester_email=user.email,
             message=text,
             ticket_edit=body.ticket_edit,
+            user_id=str(user.id),
         )
     except ThreadNotFound:
         log.warning("conversation not found or not owned")
@@ -160,7 +174,7 @@ def send_message(
         raise HTTPException(status.HTTP_409_CONFLICT, ALREADY_SENT) from None
     _log_turn(turn, text, started)
     _record(request, thread_id, user.email, text)
-    return to_chat_response(turn, user.email)
+    return _render(request, turn, user.email)
 
 
 @router.get("/{thread_id}", response_model=HistoryResponse)

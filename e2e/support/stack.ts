@@ -63,6 +63,13 @@ export class Controls {
     return (await response.json()) as FakeTicket[];
   }
 
+  /** The thumbs up and down given so far. */
+  async feedback(): Promise<{ trace_id: string; vote: "up" | "down"; comment: string | null }[]> {
+    const response = await this.api.get("/api/_e2e/feedback");
+    expect(response.status()).toBe(200);
+    return (await response.json()) as { trace_id: string; vote: "up" | "down"; comment: string | null }[];
+  }
+
   async dispose(): Promise<void> {
     await this.api.dispose();
   }

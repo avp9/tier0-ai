@@ -10,6 +10,7 @@ from tier0.intent.types import (
     IntentUnavailable,
     Turn,
 )
+from tier0.observability.tracing import traced
 
 log = logging.getLogger(__name__)
 
@@ -24,6 +25,19 @@ class ResilientIntentClassifier:
             raise ValueError("at least one classifier is required")
         self._classifiers = list(classifiers)
 
+    @traced(
+        run_type="chain",
+        name="classify_intent",
+        process_inputs=lambda inputs: {
+            "message": inputs.get("message"),
+            "earlier_turns": len(inputs.get("history") or []),
+        },
+        process_outputs=lambda result: {
+            "intent": result.intent.value,
+            "confidence": result.confidence,
+            "source": result.source,
+        },
+    )
     def classify(self, message: str, history: list[Turn]) -> IntentResult:
         failures: list[str] = []
         for classifier in self._classifiers:

@@ -3,9 +3,11 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from chromadb.api.models.Collection import Collection
 
+from tier0.observability.tracing import traced
 from tier0.rag.embeddings import Embedder
 from tier0.rag.indexer import open_collection
 
@@ -22,6 +24,19 @@ class Hit:
     source: str
     content: str
     score: float  # cosine similarity: 1.0 identical, 0.0 unrelated
+
+    def for_trace(self) -> dict[str, Any]:
+        """How a match shows in a trace: the text (cut short) and what it is."""
+        return {
+            "page_content": self.content[:600],
+            "metadata": {
+                "document_id": self.document_id,
+                "title": self.title,
+                "category": self.category,
+                "source": self.source,
+                "score": round(self.score, 3),
+            },
+        }
 
 
 class Retriever:
@@ -48,6 +63,12 @@ class Retriever:
         """The embedding of a question, so a caller that needs it can search with it too."""
         return list(self._embedder.embed([query])[0])
 
+    @traced(
+        run_type="retriever",
+        name="knowledge_base_search",
+        process_inputs=lambda inputs: {"query": inputs.get("query"), "k": inputs.get("k")},
+        process_outputs=lambda hits: {"documents": [hit.for_trace() for hit in hits]},
+    )
     def search(self, query: str, k: int = 5, *, vector: Sequence[float] | None = None) -> list[Hit]:
         """The best matches. Pass ``vector`` (from ``embed``) to avoid embedding the query twice."""
         if k < 1:

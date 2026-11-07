@@ -96,7 +96,8 @@ def test_a_streamed_answer_sends_pieces_then_the_same_turn_the_json_endpoint_giv
     assert name == "done" and tokens and all(kind == "token" for kind, _ in tokens)
     assert "".join(data["text"] for _, data in tokens) == "Here is what the handbook says."
     plain = chat(alice, ANSWERABLE).json()
-    assert {**done, "thread_id": None} == {**plain, "thread_id": None}
+    ignore = {"thread_id": None, "feedback_token": None}  # each turn has its own
+    assert {**done, **ignore} == {**plain, **ignore}
 
 
 def test_a_streamed_reply_the_model_did_not_write_is_just_the_final_event(
@@ -463,6 +464,7 @@ def test_a_knowledge_answer_has_the_documented_shape(alice: TestClient) -> None:
         "pending_action",
         "ticket",
         "cached",
+        "feedback_token",
     }
     assert body["cached"] is False
     uuid.UUID(body["thread_id"])  # the server created a real UUID

@@ -19,6 +19,7 @@ from tier0.intent.types import (
     Turn,
 )
 from tier0.llm.fake import FakeChatModel
+from tier0.observability.tracing import Tracing
 from tier0.rag import answerability, answering, rewrite
 from tier0.rag.answerability import AnswerabilityConfig
 from tier0.rag.answering import AnswerService
@@ -91,7 +92,12 @@ class SpyAnswers(AnswerService):
 
 
 class Harness:
-    def __init__(self, retriever: Retriever, cache: SemanticCache | None = None) -> None:
+    def __init__(
+        self,
+        retriever: Retriever,
+        cache: SemanticCache | None = None,
+        tracing: Tracing | None = None,
+    ) -> None:
         self.rewrite_output = "I cannot connect to the company VPN from home"
         self.llm = FakeChatModel(self._respond)
         self.classifier = ScriptedClassifier()
@@ -108,7 +114,7 @@ class Harness:
             submission=submission,
             status=TicketStatusService(self.adapter),
         )
-        self.agent: AgentService = build_agent(deps, MemorySaver())
+        self.agent: AgentService = build_agent(deps, MemorySaver(), tracing)
 
     def _respond(self, system: str, user: str, _json_mode: bool) -> str:
         if system == answerability.SUFFICIENCY_SYSTEM:

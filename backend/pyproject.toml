@@ -12,6 +12,7 @@ dependencies = [
     "jira>=3.10.5",
     "langgraph>=1.2.20",
     "langgraph-checkpoint-postgres>=3.2.0",
+    "langsmith>=0.14.17",
     "openai>=3.46.0",
     "psycopg-pool>=3.3.3",
     "psycopg[binary]>=3.3.8",

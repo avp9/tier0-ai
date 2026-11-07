@@ -17,6 +17,7 @@ import type {
   Message,
   PendingAction,
   TicketEdit,
+  Vote,
 } from "./types";
 
 interface Props {
@@ -196,6 +197,7 @@ export function ChatPage({ me, onSignOut, onSessionExpired }: Props) {
             sources: reply.sources,
             ticket: reply.ticket,
             cached: reply.cached === true,
+            feedbackToken: reply.feedback_token ?? null,
           }),
         ]);
         setPending(reply.pending_action);
@@ -229,6 +231,22 @@ export function ChatPage({ me, onSignOut, onSessionExpired }: Props) {
     if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
       event.preventDefault();
       void send(draft, true);
+    }
+  }
+
+  /** Rate an answer. The rating shows at once and is put back if it could not be saved. */
+  async function rate(item: Item, vote: Vote | null) {
+    if (!item.feedbackToken) return;
+    const before = item.vote ?? null;
+    const set = (value: Vote | null) =>
+      setItems((previous) => previous.map((i) => (i.id === item.id ? { ...i, vote: value } : i)));
+    set(vote);
+    try {
+      await api.sendFeedback(item.feedbackToken, vote);
+    } catch (failure) {
+      set(before);
+      if (failure instanceof ApiError && failure.status === 401) onSessionExpired();
+      else setError("Your rating could not be saved. Please try again.");
     }
   }
 
@@ -333,7 +351,7 @@ export function ChatPage({ me, onSignOut, onSessionExpired }: Props) {
             {restoring && <p role="status">Restoring your conversation…</p>}
             <ol>
               {items.map((item) => (
-                <MessageItem key={item.id} item={item} gender={me.gender} />
+                <MessageItem key={item.id} item={item} gender={me.gender} onVote={(i, v) => void rate(i, v)} />
               ))}
               {live !== null && (
                 <MessageItem

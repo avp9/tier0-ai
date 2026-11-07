@@ -5,6 +5,7 @@ All notable changes, newest first. The project follows one small pull request pe
 ## Unreleased (first complete version, 2026-11-05 to 2026-11-06)
 
 ### After the first version
+- **LangSmith**: every chat turn traced (search, model calls with tokens and cost, ticket calls) to `<agent-id>-<environment>`, with emails, long numbers and secrets masked first; thumbs up/down under each answer, stored in Postgres (`answer_feedback`) and attached to the trace; evaluation datasets and experiments (`scripts/langsmith_eval.py`). Never active in e2e. See [docs/langsmith.md](docs/langsmith.md).
 - **Redis semantic cache** for answers, optional (`REDIS_URL`): the same question is answered from a key lookup with no embedding, a reworded one by embedding similarity, with no search and no model call. Never caches gaps, outages or questions with personal details; fails open; namespaced by index, models and prompts. See [docs/semantic-cache.md](docs/semantic-cache.md).
 
 ### Quality and delivery
