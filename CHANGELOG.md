@@ -4,6 +4,9 @@ All notable changes, newest first. The project follows one small pull request pe
 
 ## Unreleased (first complete version, 2026-11-05 to 2026-11-06)
 
+### After the first version
+- **Redis semantic cache** for answers, optional (`REDIS_URL`): the same question is answered from a key lookup with no embedding, a reworded one by embedding similarity, with no search and no model call. Never caches gaps, outages or questions with personal details; fails open; namespaced by index, models and prompts. See [docs/semantic-cache.md](docs/semantic-cache.md).
+
 ### Quality and delivery
 - **T25** README with clean-clone setup, architecture, design decisions, demo script, screenshots and recording, this changelog.
 - **T24** Failure and adversarial tests (#39). Fixed: login throttling that would have locked out every user behind Azure's ingress (new `TRUSTED_PROXY_HOPS`), no request size limit (new `MAX_REQUEST_BYTES`), blank model answers shown as answers, OpenAI replies with no choices crashing, ticket-write failures wrongly reported as "nothing happened", malformed Jira replies crashing, quotes in knowledge-base titles breaking the prompt fence.

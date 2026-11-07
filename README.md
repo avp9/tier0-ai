@@ -79,6 +79,8 @@ All settings are environment variables ([`.env.example`](.env.example) has a tem
 | `JIRA_PROJECT_KEY` (`SUP`), `JIRA_REQUESTER_FIELD_ID` / `_NAME`, `JIRA_ISSUE_TYPE`, `JIRA_SET_PRIORITY_FIELD` | | Where tickets go and how the requester is stored |
 | `VECTOR_STORE_PATH` | | The Chroma index folder (default `.data/chroma`) |
 | `RETRIEVAL_TOP_K`, `RETRIEVAL_SCORE_THRESHOLD` | | Retrieval depth and the minimum similarity to answer |
+| `REDIS_URL` | | Optional Redis (with the search module: Redis 8 or Redis Stack) for the [answer cache](docs/semantic-cache.md); empty means no cache |
+| `SEMANTIC_CACHE_SIMILARITY`, `SEMANTIC_CACHE_TTL_SECONDS`, `SEMANTIC_CACHE_TIMEOUT_SECONDS` | | How alike two questions must be to share an answer (default 0.88; the same question always does), how long answers are kept (a day), and the Redis timeout (0.5 s) |
 | `EVALUATION_DIR` | | Folder with `retrieval_cases.json` and `knowledge_gaps.json` for the header's search quality check (default `data/evaluation` in a checkout; the production image does not include it) |
 | `STATIC_DIR` | | The built web app (`frontend/dist`); the server serves it when set |
 | `LLM_PROVIDER`, `TICKETING_PROVIDER` | | `openai`/`jira` (default) or `fake` (local and e2e only) |
@@ -111,6 +113,7 @@ Target: Azure Container Apps (staging and production) plus PostgreSQL B1ms, abou
 | [Design decisions](docs/design-decisions.md) | Where and why this departs from the specification, with the ADRs |
 | [Demo script](docs/demo-script.md) | A 10-minute walkthrough of the three flows, with screenshots |
 | [Component reference](docs/reference.md) | Commands and behaviour for each part |
+| [Answer cache](docs/semantic-cache.md) | Redis semantic cache: how questions are matched, what is stored, setup and tuning |
 | [Evaluation report](docs/evaluation-report.md), [Observability](docs/observability.md), [Failure testing](docs/failure-and-adversarial-testing.md), [Azure setup](docs/azure-setup.md), [Rollback](docs/rollback.md) | |
 | [Project plan](PROJECT_PLAN.md), [backlog](PRODUCT_BACKLOG.md), [glossary](GLOSSARY.md), [changelog](CHANGELOG.md) | |
 

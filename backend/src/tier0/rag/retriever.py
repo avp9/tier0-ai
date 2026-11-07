@@ -38,10 +38,22 @@ class Retriever:
     def open(cls, index_dir: Path, embedder: Embedder) -> Retriever:
         return cls(open_collection(index_dir), embedder)
 
-    def search(self, query: str, k: int = 5) -> list[Hit]:
+    @property
+    def fingerprint(self) -> str:
+        """Identifies exactly what this retriever searches: the index contents and the model."""
+        stored = (self._collection.metadata or {}).get("content_hash", "")
+        return f"{stored}|{self._embedder.model_id}"
+
+    def embed(self, query: str) -> list[float]:
+        """The embedding of a question, so a caller that needs it can search with it too."""
+        return list(self._embedder.embed([query])[0])
+
+    def search(self, query: str, k: int = 5, *, vector: Sequence[float] | None = None) -> list[Hit]:
+        """The best matches. Pass ``vector`` (from ``embed``) to avoid embedding the query twice."""
         if k < 1:
             raise ValueError("k must be at least 1")
-        vector: Sequence[float] = self._embedder.embed([query])[0]
+        if vector is None:
+            vector = self._embedder.embed([query])[0]
         result = self._collection.query(
             query_embeddings=[vector],
             n_results=k,

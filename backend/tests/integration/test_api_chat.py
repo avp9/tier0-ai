@@ -16,6 +16,7 @@ from tier0.rag.embeddings import FakeEmbedder
 from tier0.rag.indexer import build_index
 from tier0.rag.loader import load_knowledge_base
 from tier0.rag.retriever import Retriever
+from tier0.rag.semantic_cache import InMemorySemanticCache
 from tier0.tickets.errors import TicketOutcomeUnknown
 
 FIXTURE_DIR = Path(__file__).resolve().parents[3] / "data" / "fixtures"
@@ -289,6 +290,84 @@ def test_saying_done_closes_the_list(alice: TestClient, harness: Harness) -> Non
     assert alice.get(f"/api/chat/{thread}").json()["pending_action"] is None
 
 
+# --- the semantic cache ---------------------------------------------------------------
+
+
+@pytest.fixture
+def cached_harness(retriever: Retriever) -> Harness:
+    return Harness(retriever, cache=InMemorySemanticCache(min_similarity=0.95))
+
+
+@pytest.fixture
+def cached_app(migrated_database: str, cached_harness: Harness) -> Any:
+    return create_app(make_settings(migrated_database), agent=cached_harness.agent)
+
+
+def test_the_same_question_asked_again_is_answered_from_the_cache(
+    cached_app: Any, cached_harness: Harness
+) -> None:
+    with TestClient(cached_app) as client:
+        sign_in(client, ALICE)
+        first = chat(client, ANSWERABLE).json()
+        spent = len(cached_harness.llm.calls)
+        second = chat(client, ANSWERABLE).json()
+        assert first["cached"] is False and second["cached"] is True
+        assert second["reply"] == first["reply"] and second["sources"] == first["sources"]
+        assert len(cached_harness.llm.calls) == spent  # no model was called for the second
+
+
+def test_a_cached_answer_is_still_part_of_the_conversation(
+    cached_app: Any, cached_harness: Harness
+) -> None:
+    with TestClient(cached_app) as client:
+        sign_in(client, ALICE)
+        chat(client, ANSWERABLE)
+        again = chat(client, ANSWERABLE).json()
+        history = client.get(f"/api/chat/{again['thread_id']}").json()["messages"]
+        assert [m["role"] for m in history] == ["user", "assistant"]
+        assert history[1]["content"] == again["reply"]
+
+
+def test_another_employee_gets_the_same_cached_answer(
+    cached_app: Any, cached_harness: Harness
+) -> None:
+    with TestClient(cached_app) as alice_client:
+        sign_in(alice_client, ALICE)
+        first = chat(alice_client, ANSWERABLE).json()
+    with TestClient(cached_app) as bob_client:
+        sign_in(bob_client, BOB)
+        second = chat(bob_client, ANSWERABLE).json()
+        assert second["cached"] is True and second["reply"] == first["reply"]
+        assert second["thread_id"] != first["thread_id"]  # their own conversation
+
+
+def test_a_streamed_cached_answer_arrives_as_one_done_event(
+    cached_app: Any, cached_harness: Harness
+) -> None:
+    with TestClient(cached_app) as client:
+        sign_in(client, ALICE)
+        chat(client, ANSWERABLE)
+        streamed = client.post("/api/chat", json={"message": ANSWERABLE}, headers=STREAM)
+        ((name, done),) = parse_sse(streamed.text)
+        assert name == "done" and done["cached"] is True
+
+
+def test_a_question_the_knowledge_base_cannot_answer_is_never_cached(
+    cached_app: Any, cached_harness: Harness
+) -> None:
+    with TestClient(cached_app) as client:
+        sign_in(client, ALICE)
+        for _ in range(2):
+            response = chat(client, GAP).json()
+            assert response["cached"] is False
+            assert response["pending_action"]["type"] == "offer_ticket"
+
+
+def test_nothing_is_cached_unless_a_cache_is_configured(alice: TestClient) -> None:
+    chat(alice, ANSWERABLE)
+    assert chat(alice, ANSWERABLE).json()["cached"] is False
+
+
 # --- the chat history ----------------------------------------------------------------
 
 
@@ -376,7 +455,16 @@ def test_a_knowledge_answer_has_the_documented_shape(alice: TestClient) -> None:
     response = chat(alice, ANSWERABLE)
     assert response.status_code == 200
     body = response.json()
-    assert set(body) == {"thread_id", "reply", "intent", "sources", "pending_action", "ticket"}
+    assert set(body) == {
+        "thread_id",
+        "reply",
+        "intent",
+        "sources",
+        "pending_action",
+        "ticket",
+        "cached",
+    }
+    assert body["cached"] is False
     uuid.UUID(body["thread_id"])  # the server created a real UUID
     assert body["reply"].endswith("Sources: Documents to Bring on Your First Day")
     assert (

@@ -54,6 +54,7 @@ class ChatTurn(BaseModel):
     options: list[str] = Field(default_factory=list)
     preview: str | None = None
     editable: bool = False  # the preview can still be changed (nothing has been sent yet)
+    cached: bool = False  # the reply was reused from an earlier, similar question
     sources: list[Source] = Field(default_factory=list)
     created_ticket: CreatedTicket | None = None
     intent: IntentResult | None = None
@@ -196,6 +197,7 @@ class AgentService:
         base: dict[str, Any] = {
             "thread_id": thread_id,
             "sources": result.get("sources") or [],
+            "cached": bool(result.get("answer_cached", False)),
             "created_ticket": result.get("created_ticket"),
             "intent": result.get("intent"),
             "workflow": WorkflowStatus(result.get("workflow", WorkflowStatus.IDLE)),

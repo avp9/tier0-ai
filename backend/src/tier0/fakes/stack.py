@@ -24,6 +24,7 @@ from tier0.intent.types import (
 from tier0.llm.base import LLMError
 from tier0.llm.fake import words
 from tier0.rag import answerability, answering, rewrite
+from tier0.rag.semantic_cache import SemanticCache
 from tier0.tickets import drafting
 from tier0.tickets.confirmation import Reply, interpret
 from tier0.tickets.fake import FakeTicketAdapter
@@ -161,3 +162,4 @@ class FakeControls:
     adapter: FakeTicketAdapter | None
     chat: ScriptedChatModel | None
     classifier: RuleBasedClassifier | None
+    cache: SemanticCache | None = None

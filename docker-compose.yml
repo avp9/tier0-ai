@@ -1,5 +1,5 @@
-# Isolated stack for browser tests: the real app and Postgres with fake language models and a
-# fake ticket system. The credentials below are throwaway values for this local stack only.
+# Isolated stack for browser tests: the real app, Postgres and Redis (for the answer cache) with
+# fake language models and a fake ticket system. The credentials below are throwaway values for this local stack only.
 services:
   db:
     image: postgres:16-bookworm
@@ -12,12 +12,21 @@ services:
       interval: 2s
       timeout: 3s
       retries: 30
+  redis:
+    image: redis:8  # includes the search module the semantic cache needs
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
   app:
     build:
       context: .
       target: e2e
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     ports:
       - "127.0.0.1:8000:8000"
@@ -28,6 +37,7 @@ services:
       TICKETING_PROVIDER: fake
       E2E_TOKEN: ${E2E_TOKEN:-e2e-local-token}
       DATABASE_URL: postgresql://tier0:tier0-e2e-only@db:5432/tier0
+      REDIS_URL: redis://redis:6379
       SESSION_SECRET: e2e-only-session-secret-not-for-real-use-0123456789
       DEMO_USERS: >-
         [{"email":"alice@buzztech.example","name":"Alice Demo","password":"alice-demo-pass-1","gender":"female"},

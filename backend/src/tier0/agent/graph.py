@@ -92,6 +92,7 @@ class Conversation:
             "sources": [],
             "created_ticket": None,
             "answer_decision": None,
+            "answer_cached": False,
             "ticket_choices": [],
             "selection_attempts": 0,
         }
@@ -130,6 +131,7 @@ class Conversation:
         result = self._deps.answers.answer(question, on_token=_token_sink())
         update: dict[str, Any] = {
             "answer_decision": result.decision,
+            "answer_cached": result.cached,
             "sources": result.sources,
             "reply": result.reply,
         }
@@ -178,6 +180,7 @@ class Conversation:
             "reply": "",
             "sources": [],
             "answer_decision": None,
+            "answer_cached": False,
             "ticket_choices": [],
             "selection_attempts": 0,
         }

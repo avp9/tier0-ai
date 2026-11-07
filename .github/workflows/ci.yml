@@ -34,9 +34,21 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 12
+      # For the semantic cache tests (Redis 8 includes the search module they need).
+      redis:
+        image: redis:8
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
     env:
       TIER0_TEST_DATABASE_URL: postgresql://tier0:tier0-ci-only@localhost:5432/postgres
       REQUIRE_DB_TESTS: "1"
+      TIER0_TEST_REDIS_URL: redis://localhost:6379
+      REQUIRE_REDIS_TESTS: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5

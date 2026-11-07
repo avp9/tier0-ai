@@ -82,6 +82,7 @@ class ChatResponse(BaseModel):
     sources: list[Source] = Field(default_factory=list)
     pending_action: PendingAction | None = None
     ticket: TicketRef | None = None
+    cached: bool = False  # the answer was reused from an earlier, similar question
 
 
 class HistoryResponse(BaseModel):
@@ -121,6 +122,7 @@ def to_chat_response(turn: ChatTurn, requester_email: str) -> ChatResponse:
         sources=turn.sources,
         pending_action=_pending_action(turn, requester_email),
         ticket=TicketRef(ticket_key=created.key, url=created.url) if created else None,
+        cached=turn.cached,
     )
 
 

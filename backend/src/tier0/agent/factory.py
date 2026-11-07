@@ -17,12 +17,18 @@ from tier0.intent.factory import build_classifier
 from tier0.intent.types import IntentClassifier
 from tier0.llm.base import ChatModel
 from tier0.llm.openai_chat import OpenAIChatModel
+from tier0.rag import answerability, answering
 from tier0.rag.answerability import AnswerabilityConfig
 from tier0.rag.answering import AnswerService
 from tier0.rag.embeddings import Embedder, FakeEmbedder, OpenAIEmbedder
 from tier0.rag.indexer import open_collection
 from tier0.rag.retriever import Retriever
 from tier0.rag.rewrite import QuestionRewriter
+from tier0.rag.semantic_cache import (
+    RedisSemanticCache,
+    SemanticCache,
+    cache_namespace,
+)
 from tier0.tickets.base import TicketAdapter
 from tier0.tickets.config import JiraConfig
 from tier0.tickets.drafting import TicketDrafter
@@ -65,6 +71,29 @@ def jira_config(settings: Settings) -> JiraConfig:
         requester_field_name=settings.jira_requester_field_name,
         issue_type=settings.jira_issue_type,
         set_priority_field=settings.jira_set_priority_field,
+    )
+
+
+def build_semantic_cache(settings: Settings, retriever: Retriever) -> SemanticCache | None:
+    """The answer cache, when a Redis URL is configured. Nothing is contacted until first use."""
+    if settings.redis_url is None:
+        return None
+    # Everything an answer depends on, so a change to any of it starts a fresh cache.
+    namespace = cache_namespace(
+        retriever.fingerprint,
+        settings.llm_provider,
+        settings.openai_model_name,
+        answering.ANSWER_SYSTEM,
+        answerability.SUFFICIENCY_SYSTEM,
+        settings.retrieval_score_threshold,
+        settings.retrieval_top_k,
+    )
+    return RedisSemanticCache(
+        settings.redis_url.get_secret_value(),
+        namespace,
+        min_similarity=settings.semantic_cache_similarity,
+        ttl_seconds=settings.semantic_cache_ttl_seconds,
+        timeout_seconds=settings.semantic_cache_timeout_seconds,
     )
 
 
@@ -120,6 +149,7 @@ def build_components(
         adapter = JiraAdapter(jira_config(settings))
 
     retriever = Retriever.open(Path(settings.vector_store_path), embedder)
+    cache = build_semantic_cache(settings, retriever)
     deps = AgentDependencies(
         classifier=classifier,
         answers=AnswerService(
@@ -128,6 +158,7 @@ def build_components(
             AnswerabilityConfig(
                 score_threshold=settings.retrieval_score_threshold, top_k=settings.retrieval_top_k
             ),
+            cache=cache,
         ),
         rewriter=QuestionRewriter(chat),
         drafter=TicketDrafter(chat),
@@ -135,7 +166,7 @@ def build_components(
         status=TicketStatusService(adapter),
     )
     controls = (
-        FakeControls(adapter=fake_adapter, chat=fake_chat, classifier=fake_classifier)
+        FakeControls(adapter=fake_adapter, chat=fake_chat, classifier=fake_classifier, cache=cache)
         if (fake_adapter or fake_chat)
         else None
     )

@@ -66,6 +66,13 @@ class Settings(BaseSettings):
     vector_store_path: str = ".data/chroma"
     retrieval_top_k: int = Field(default=5, ge=1, le=20)
     retrieval_score_threshold: float = Field(default=0.30, ge=0.0, le=1.0)
+    # Semantic cache for answers (Redis with the search module, e.g. Redis 8 or Redis Stack).
+    # Empty means no cache. A question whose embedding is at least this similar to an answered
+    # one gets the stored answer, until it expires.
+    redis_url: SecretStr | None = None
+    semantic_cache_similarity: float = Field(default=0.88, ge=0.5, le=1.0)
+    semantic_cache_ttl_seconds: int = Field(default=86400, ge=1)
+    semantic_cache_timeout_seconds: float = Field(default=0.5, gt=0.0, le=10.0)
     # Folder with retrieval_cases.json and knowledge_gaps.json for the search check in the header.
     # Empty means <repo>/data/evaluation, which exists when running from a checkout.
     evaluation_dir: str = ""
