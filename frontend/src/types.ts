@@ -66,6 +66,8 @@ export interface ChatResponse {
   sources: Source[];
   pending_action: PendingAction | null;
   ticket: TicketRef | null;
+  /** The answer was reused from an earlier, similar question rather than worked out afresh. */
+  cached?: boolean;
 }
 
 export interface HistoryResponse {

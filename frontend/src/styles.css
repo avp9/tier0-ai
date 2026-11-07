@@ -541,6 +541,14 @@ label {
   border-radius: 12px;
 }
 
+.cache-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
 .match-details {
   display: block;
   font-size: 0.75rem;

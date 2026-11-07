@@ -77,6 +77,7 @@ class AgentState(TypedDict, total=False):
     intent: IntentResult | None
     workflow: WorkflowStatus
     answer_decision: AnswerabilityDecision | None
+    answer_cached: bool  # the answer was reused from an earlier, similar question
     pending_ticket: PendingTicket | None
     ticket_choices: list[TicketSummary]
     selected_ticket_key: str | None

@@ -187,7 +187,11 @@ export function ChatPage({ me, onSignOut, onSessionExpired }: Props) {
         setThreadId(reply.thread_id);
         setItems((previous) => [
           ...previous,
-          newItem("assistant", replyText(reply), { sources: reply.sources, ticket: reply.ticket }),
+          newItem("assistant", replyText(reply), {
+            sources: reply.sources,
+            ticket: reply.ticket,
+            cached: reply.cached === true,
+          }),
         ]);
         setPending(reply.pending_action);
         refreshConversations();

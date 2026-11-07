@@ -9,6 +9,7 @@ export interface Item {
   text: string;
   sources: Source[];
   ticket: TicketRef | null;
+  cached?: boolean;
 }
 
 function CreatedTicket({ ticket }: { ticket: TicketRef }) {
@@ -81,7 +82,15 @@ export function MessageItem({
             ))}
           </ul>
         )}
-        {item.ticket && <CreatedTicket ticket={item.ticket} />}
+          {item.cached && (
+          <span className="cache-note">
+            <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false">
+              <path d="M13 2 4 14h7l-1 8 9-12h-7z" fill="currentColor" />
+            </svg>
+            Answered from cache
+          </span>
+        )}
+      {item.ticket && <CreatedTicket ticket={item.ticket} />}
       </div>
     </li>
   );

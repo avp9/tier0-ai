@@ -1456,3 +1456,45 @@ describe("looking through several tickets", () => {
     expect(within(list()).getAllByRole("button")).toHaveLength(4);
   });
 });
+
+describe("answers reused from the cache", () => {
+  it("says an answer came from the cache", async () => {
+    stubApi({ "POST /api/chat": () => json(chatReply({ reply: "Use the portal.", cached: true })) });
+    const { user } = renderChat();
+    await say(user, "How do I reset my password?");
+    expect(await within(conversation()).findByText("Answered from cache")).toBeVisible();
+  });
+
+  it("says nothing about the cache for a fresh answer", async () => {
+    stubApi({ "POST /api/chat": () => json(chatReply({ reply: "Use the portal.", cached: false })) });
+    const { user } = renderChat();
+    await say(user, "How do I reset my password?");
+    await within(conversation()).findByText("Use the portal.");
+    expect(screen.queryByText("Answered from cache")).not.toBeInTheDocument();
+  });
+
+  it("works with a server that does not send the field at all", async () => {
+    stubApi({ "POST /api/chat": () => json(chatReply({ reply: "Use the portal." })) });
+    const { user } = renderChat();
+    await say(user, "hello");
+    await within(conversation()).findByText("Use the portal.");
+    expect(screen.queryByText("Answered from cache")).not.toBeInTheDocument();
+  });
+
+  it("notes it only on the cached answer, not on the employee's own message", async () => {
+    stubApi({ "POST /api/chat": () => json(chatReply({ reply: "Use the portal.", cached: true })) });
+    const { user } = renderChat();
+    await say(user, "How do I reset my password?");
+    await within(conversation()).findByText("Answered from cache");
+    expect(within(conversation()).getAllByText("Answered from cache")).toHaveLength(1);
+  });
+
+  it("shows a streamed reply that turns out to be cached with the note", async () => {
+    const stream = streamedReply();
+    stubApi({ "POST /api/chat": () => stream.response() });
+    const { user } = renderChat();
+    await say(user, "How do I reset my password?");
+    stream.done(chatReply({ reply: "Use the portal.", cached: true }));
+    expect(await within(conversation()).findByText("Answered from cache")).toBeVisible();
+  });
+});

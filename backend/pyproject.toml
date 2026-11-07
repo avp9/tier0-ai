@@ -17,6 +17,7 @@ dependencies = [
     "psycopg[binary]>=3.3.8",
     "pydantic>=2.14.3",
     "pydantic-settings>=2.16.2",
+    "redisvl>=0.31",
     "typesafe-sdk>=0.7.5",
     "uvicorn[standard]>=0.54.0",
 ]
@@ -54,3 +55,8 @@ select = ["E", "F", "I", "B", "UP", "S"]
 strict = true
 mypy_path = "tests"
 files = ["src", "tests"]
+
+# RedisVL ships without type information.
+[[tool.mypy.overrides]]
+module = ["redisvl", "redisvl.*"]
+ignore_missing_imports = true

@@ -72,10 +72,12 @@ class Failure(BaseModel):
 
 @router.post("/reset")
 def reset(request: Request, found: Controls) -> dict[str, str]:
-    """Forget tickets, scripted failures and rate-limit counters."""
+    """Forget tickets, cached answers, scripted failures and rate-limit counters."""
     adapter = _adapter(found)
     adapter.reset()
     request.app.state.conversations.clear()
+    if found.cache:
+        found.cache.clear()
     if found.chat:
         found.chat.fail_next(0)
     if found.classifier:

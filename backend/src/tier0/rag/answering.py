@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from enum import StrEnum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 
 from tier0.llm.base import ChatModel, LLMError, StreamingChatModel
 from tier0.rag.answerability import (
@@ -13,6 +14,9 @@ from tier0.rag.answerability import (
     format_passages,
 )
 from tier0.rag.retriever import Hit, Retriever
+from tier0.rag.semantic_cache import CachedAnswer, SemanticCache, cacheable
+
+log = logging.getLogger(__name__)
 
 ANSWER_SYSTEM = (
     "You are Tier0, the help-desk assistant for BuzzTech Solutions employees.\n"
@@ -55,6 +59,7 @@ class AnswerResult(BaseModel):
     sources: list[Source] = Field(default_factory=list)
     decision: AnswerabilityDecision | None = None
     retrieved_ids: list[str] = Field(default_factory=list)
+    cached: bool = False  # reused from an earlier, similar question (nothing was searched)
 
     @property
     def offers_ticket(self) -> bool:
@@ -67,14 +72,30 @@ class AnswerService:
         retriever: Retriever,
         chat: ChatModel,
         config: AnswerabilityConfig | None = None,
+        cache: SemanticCache | None = None,
     ) -> None:
         self._retriever = retriever
         self._chat = chat
         self._config = config or AnswerabilityConfig()
+        self._cache = cache
 
     def answer(self, question: str, on_token: Callable[[str], None] | None = None) -> AnswerResult:
         """Answer from the knowledge base. ``on_token`` gets the reply text as it is written."""
-        hits = self._retriever.search(question, k=self._config.top_k)
+        vector: list[float] | None = None
+        if self._cache is not None and cacheable(question):
+            # The very same question needs no embedding at all; otherwise the vector made here is
+            # reused for the search below, so a miss costs nothing extra.
+            cached = self._reuse(self._cache, question, None)
+            if cached is not None:
+                return cached
+            vector = self._retriever.embed(question)
+            cached = self._reuse(self._cache, question, vector)
+            if cached is not None:
+                return cached
+        if vector is None:
+            hits = self._retriever.search(question, k=self._config.top_k)
+        else:
+            hits = self._retriever.search(question, k=self._config.top_k, vector=vector)
         retrieved_ids = [h.document_id for h in hits]
         try:
             decision, passages = assess(question, hits, self._chat, self._config)
@@ -98,12 +119,47 @@ class AnswerService:
 
         sources = self._sources(decision, passages)
         titles = "; ".join(s.title for s in sources)
-        return AnswerResult(
+        result = AnswerResult(
             outcome=Outcome.ANSWERED,
             reply=f"{text}\n\nSources: {titles}",
             sources=sources,
             decision=decision,
             retrieved_ids=retrieved_ids,
+        )
+        if self._cache is not None and vector is not None:
+            # Only real answers are kept: a gap or an outage must never be replayed to others.
+            try:
+                self._cache.store(
+                    question,
+                    vector,
+                    CachedAnswer(result.reply, [s.model_dump(mode="json") for s in sources]),
+                )
+            except Exception:
+                log.warning("semantic cache store failed", exc_info=True)
+        return result
+
+    @staticmethod
+    def _reuse(
+        cache: SemanticCache, question: str, vector: list[float] | None
+    ) -> AnswerResult | None:
+        """The stored answer to this question (``vector`` None) or to one that means the same."""
+        step = "exact" if vector is None else "semantic"
+        try:
+            stored = cache.lookup_exact(question) if vector is None else cache.lookup(vector)
+        except Exception:  # a cache problem must never stop a question being answered
+            log.warning("semantic cache lookup failed; answering normally", exc_info=True)
+            return None
+        if stored is None:
+            log.info("semantic cache miss", extra={"fields": {"step": step}})
+            return None
+        try:
+            sources = [Source.model_validate(s) for s in stored.sources]
+        except ValidationError:
+            log.warning("semantic cache entry could not be read; answering normally")
+            return None
+        log.info("semantic cache hit", extra={"fields": {"step": step, "sources": len(sources)}})
+        return AnswerResult(
+            outcome=Outcome.ANSWERED, reply=stored.reply, sources=sources, cached=True
         )
 
     def _write_answer(self, prompt: str, on_token: Callable[[str], None] | None) -> str:

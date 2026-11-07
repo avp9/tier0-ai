@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "description": "Pairs of questions for tuning the semantic cache. 'same' pairs mean the same thing and should share a cached answer; 'different' pairs look alike but need different answers and must never share one. Used by scripts/inspect_semantic_cache.py.",
+  "same": [
+    ["How do I reset my password?", "how can I reset my password"],
+    ["How do I reset my password?", "how do i reset my password?!"],
+    ["How do I set up the VPN?", "What are the steps to configure the VPN?"],
+    ["How long do I have to enroll in health insurance after joining?", "What is the deadline to sign up for health insurance as a new hire?"],
+    ["What is the hotel limit for business travel?", "How much can I spend per night on a hotel when travelling for work?"],
+    ["How many public holidays does BuzzTech observe?", "How many public holidays do we get?"],
+    ["How do I report harassment at work?", "Who do I tell if I am being harassed at work?"],
+    ["Who is my buddy and what do they help with?", "What does an onboarding buddy do?"],
+    ["Unable to reset password via self-service portal", "I can't reset my password through the self-service portal"],
+    ["Does BuzzTech reimburse gym memberships?", "Will the company pay for my gym membership?"],
+    ["How do I request a new laptop?", "How can I get a replacement laptop?"],
+    ["What documents do I need to bring on my first day?", "What should I bring with me on my first day?"],
+    ["How do I book a meeting room?", "How can I reserve a conference room?"],
+    ["What is the parental leave policy?", "How much parental leave do I get?"]
+  ],
+  "different": [
+    ["How do I reset my password?", "How do I reset my VPN token?"],
+    ["How do I set up the VPN?", "How do I set up the printer?"],
+    ["What is the hotel limit for business travel?", "What is the meal limit for business travel?"],
+    ["How many public holidays does BuzzTech observe?", "How many vacation days do I get?"],
+    ["How do I report harassment at work?", "How do I report a lost laptop?"],
+    ["How long do I have to enroll in health insurance?", "How long do I have to enroll in the 401(k) plan?"],
+    ["Can I work from home on Fridays?", "Can I work from abroad for a month?"],
+    ["How do I request a new laptop?", "How do I request a new monitor?"],
+    ["What is the parental leave policy?", "What is the bereavement leave policy?"],
+    ["How do I submit an expense report?", "How do I approve an expense report?"],
+    ["Does BuzzTech reimburse gym memberships?", "Does BuzzTech reimburse home internet?"],
+    ["How do I reset my password?", "How do I reset my badge access?"],
+    ["Who is my buddy and what do they help with?", "Who is my manager and what do they help with?"],
+    ["How do I book a meeting room?", "How do I cancel a meeting room booking?"]
+  ]
+}

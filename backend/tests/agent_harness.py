@@ -23,6 +23,7 @@ from tier0.rag import answerability, answering, rewrite
 from tier0.rag.answerability import AnswerabilityConfig
 from tier0.rag.answering import AnswerService
 from tier0.rag.retriever import Retriever
+from tier0.rag.semantic_cache import SemanticCache
 from tier0.tickets import drafting
 from tier0.tickets.confirmation import Reply, interpret
 from tier0.tickets.drafting import TicketDrafter
@@ -90,13 +91,13 @@ class SpyAnswers(AnswerService):
 
 
 class Harness:
-    def __init__(self, retriever: Retriever) -> None:
+    def __init__(self, retriever: Retriever, cache: SemanticCache | None = None) -> None:
         self.rewrite_output = "I cannot connect to the company VPN from home"
         self.llm = FakeChatModel(self._respond)
         self.classifier = ScriptedClassifier()
         self.adapter = FakeTicketAdapter()
         self.answers = SpyAnswers(
-            retriever, self.llm, AnswerabilityConfig(score_threshold=SCORE_THRESHOLD)
+            retriever, self.llm, AnswerabilityConfig(score_threshold=SCORE_THRESHOLD), cache=cache
         )
         submission = TicketSubmissionService(self.adapter, InMemorySubmissionStore())
         deps = AgentDependencies(
