@@ -154,3 +154,73 @@ test("opening an earlier chat shows its latest messages", async ({ page, control
     })
     .toBeLessThan(4);
 });
+
+/** Whether the newest message and the typing row are both on screen inside the conversation. */
+const sentIsVisible = (page: Page) =>
+  page.evaluate(() => {
+    const log = document.querySelector(".log") as HTMLElement;
+    const box = log.getBoundingClientRect();
+    const inside = (el: Element | null) => {
+      if (!el) return false;
+      const r = el.getBoundingClientRect();
+      return r.top >= box.top - 1 && r.bottom <= box.bottom + 1;
+    };
+    return {
+      message: inside(log.querySelector("ol > li:last-child")),
+      typing: inside(log.querySelector(".typing")),
+    };
+  });
+
+test("a message typed and sent is shown with the typing indicator, without scrolling by hand", async ({
+  page,
+}) => {
+  // A conversation that already fills the screen, with the reader at the bottom of it.
+  for (const question of [
+    "Request for VPN setup for remote work",
+    "Unable to reset password via self-service portal",
+    "Request for VPN setup for remote work please",
+    "Unable to reset password via self-service portal now",
+  ]) {
+    await say(page, question);
+    await expect(conversation(page)).toContainText("Here is what our knowledge base says");
+    await expect(page.getByRole("status").filter({ hasText: /typing/i })).toHaveCount(0);
+  }
+  const before = await scrollOf(page);
+  expect(before.max).toBeGreaterThan(0);
+  expect(before.max - before.log).toBeLessThan(40); // at the bottom, give or take a margin
+  await delayReplies(page, 1500);
+  await say(page, "How do I set up the VPN for remote work?");
+  await expect(page.getByRole("status").filter({ hasText: /typing/i })).toBeVisible();
+  await page.waitForTimeout(300);
+  expect(await sentIsVisible(page)).toEqual({ message: true, typing: true });
+});
+
+test("a typed message is shown even if the reader had scrolled up to the top", async ({
+  page,
+  controls,
+}) => {
+  await reachTicketChoice(page, controls);
+  await page.getByRole("region", { name: "Choose a ticket" }).getByRole("button", { name: "Done" }).click();
+  await page.locator(".log").evaluate((el) => (el.scrollTop = 0));
+  await delayReplies(page, 1500);
+  await say(page, "Unable to reset password via self-service portal");
+  await expect(page.getByRole("status").filter({ hasText: /typing/i })).toBeVisible();
+  await page.waitForTimeout(300);
+  expect(await sentIsVisible(page)).toEqual({ message: true, typing: true });
+});
+
+test("the reply that follows a typed message stays in view too", async ({ page, controls }) => {
+  await reachTicketChoice(page, controls);
+  await page.getByRole("region", { name: "Choose a ticket" }).getByRole("button", { name: "Done" }).click();
+  await say(page, "Unable to reset password via self-service portal");
+  await expect(conversation(page)).toContainText("Here is what our knowledge base says");
+  await page.waitForTimeout(200);
+  const where = await page.evaluate(() => {
+    const log = document.querySelector(".log") as HTMLElement;
+    const last = log.querySelector("ol > li:last-child") as HTMLElement;
+    const r = last.getBoundingClientRect();
+    const l = log.getBoundingClientRect();
+    return { top: r.top >= l.top - 1, bottom: r.bottom <= l.bottom + 1, tall: r.height > log.clientHeight };
+  });
+  expect(where.top && (where.bottom || where.tall)).toBe(true);
+});
