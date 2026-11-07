@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from datetime import datetime
 from typing import Any, Protocol, cast
+from urllib.parse import urlparse
 
 import requests
 from jira import JIRA
@@ -55,6 +56,12 @@ def default_client_factory(config: JiraConfig) -> JiraClient:
         max_retries=0,
         get_server_info=False,
     )
+    # Skipping the server-info call (to keep start-up offline) leaves the library unsure whether
+    # this is Jira Cloud. Atlassian removed the old search endpoint (HTTP 410), and the library
+    # only uses the replacement once it knows the site is Cloud, so say so for atlassian.net.
+    host = urlparse(config.server).hostname or ""
+    if host.endswith(".atlassian.net"):
+        client.deploymentType = "Cloud"
     return cast(JiraClient, client)
 
 
