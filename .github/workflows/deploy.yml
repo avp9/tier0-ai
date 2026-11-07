@@ -50,7 +50,7 @@ jobs:
           conclusion=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow CI --branch main \
             --commit "$SHA" --json conclusion --jq '.[0].conclusion')
           [ "$conclusion" = "success" ] || { echo "CI has not succeeded for $SHA ($conclusion)"; exit 1; }
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ env.SHA }}
       - uses: astral-sh/setup-uv@v5
@@ -101,7 +101,7 @@ jobs:
       contents: read
       id-token: write # lets this job ask Azure for a short-lived token (OIDC)
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ env.SHA }}
       - uses: azure/login@v2
@@ -136,7 +136,7 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ env.SHA }}
       - uses: azure/login@v2
