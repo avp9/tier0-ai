@@ -592,6 +592,31 @@ describe("streaming the answer", () => {
     expect(screen.getByRole("button", { name: "Send" })).toBeDisabled(); // box is empty again
   });
 
+  it("does not wipe the next message the employee types while the answer is still streaming", async () => {
+    const stream = streamedReply();
+    stubApi({ "POST /api/chat": () => stream.response() });
+    const { user } = renderChat();
+    await say(user, "first question");
+    expect(screen.getByLabelText("Message")).toHaveValue(""); // cleared as soon as it is sent
+    stream.token("Working on it");
+    await within(conversation()).findByText("Working on it");
+    await user.type(screen.getByLabelText("Message"), "and a follow-up");
+    stream.done(chatReply({ reply: "Working on it" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Send" })).toBeEnabled());
+    expect(screen.getByLabelText("Message")).toHaveValue("and a follow-up");
+  });
+
+  it("puts a failed message back in front of anything typed since", async () => {
+    const stream = streamedReply();
+    stubApi({ "POST /api/chat": () => stream.response() });
+    const { user } = renderChat();
+    await say(user, "first question");
+    await user.type(screen.getByLabelText("Message"), "next");
+    stream.close(); // the connection breaks before a reply
+    expect(await screen.findByRole("alert")).toBeVisible();
+    expect(screen.getByLabelText("Message")).toHaveValue("first question\nnext");
+  });
+
   it("asks the server to stream, and still reads a plain JSON reply", async () => {
     const { fetchMock } = stubApi({
       "POST /api/chat": () => json(chatReply({ reply: "Whole." })),
