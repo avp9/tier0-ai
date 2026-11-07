@@ -68,7 +68,11 @@ export function ChatPage({ me, onSignOut, onSessionExpired }: Props) {
 
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const panelRef = useRef<HTMLElement>(null);
-  const endRef = useRef<HTMLDivElement>(null);
+  const logRef = useRef<HTMLDivElement>(null);
+  /** The reader is at the bottom of the conversation, so a new reply should be brought into view. */
+  const following = useRef(true);
+  /** The next change of messages is a different conversation being shown: start at its end. */
+  const showEnd = useRef(false);
 
   /** Show a saved conversation and remember it for a reload. */
   const showHistory = useCallback((history: HistoryResponse) => {
@@ -77,6 +81,7 @@ export function ChatPage({ me, onSignOut, onSessionExpired }: Props) {
       restored.push(newItem("assistant", promptText(history.pending_action)));
     }
     threadStore.set(history.thread_id);
+    showEnd.current = true;
     setThreadId(history.thread_id);
     setItems(restored);
     setPending(history.pending_action);
@@ -119,10 +124,28 @@ export function ChatPage({ me, onSignOut, onSessionExpired }: Props) {
     };
   }, [onSessionExpired, showHistory]);
 
-  // Keep the newest message in view.
+  // Bring a new reply into view, but only when the reader was already at the bottom, and only by
+  // scrolling the conversation itself (never the page). Nothing moves when the employee sends a
+  // message or clicks a button, and a reply taller than the window starts at its top.
   useEffect(() => {
-    endRef.current?.scrollIntoView({ block: "end" });
-  }, [items, pending, busy, live]);
+    const log = logRef.current;
+    if (!log) return;
+    if (showEnd.current) {
+      showEnd.current = false;
+      following.current = true;
+      log.scrollTop = log.scrollHeight;
+      return;
+    }
+    const newest = items[items.length - 1];
+    if (!following.current || (live === null && newest?.role !== "assistant")) return;
+    const message = log.querySelector<HTMLElement>("ol > li:last-child");
+    if (!message) return;
+    const box = message.getBoundingClientRect();
+    const top = box.top - log.getBoundingClientRect().top + log.scrollTop;
+    const bottomAligned = top + box.height - log.clientHeight + 8;
+    const target = Math.min(bottomAligned, top - 8); // the end if it fits, else its start
+    if (target > log.scrollTop) log.scrollTop = target;
+  }, [items, live]);
 
   // After each reply, put the keyboard where the next action is.
   useEffect(() => {
@@ -269,8 +292,19 @@ export function ChatPage({ me, onSignOut, onSessionExpired }: Props) {
 
         <main>
           {/* It scrolls on its own, so the keyboard must be able to focus it to scroll it (WCAG 2.1.1). */}
-          {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex */}
-          <div role="log" aria-live="polite" aria-label="Conversation" className="log" tabIndex={0}>
+          <div
+            role="log"
+            aria-live="polite"
+            aria-label="Conversation"
+            className="log"
+            // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+            tabIndex={0}
+            ref={logRef}
+            onScroll={(event) => {
+              const log = event.currentTarget;
+              following.current = log.scrollHeight - log.scrollTop - log.clientHeight < 80;
+            }}
+          >
             {items.length === 0 && !restoring && (
               <div className="welcome">
                 <p className="welcome-title">How can I help today?</p>
@@ -304,7 +338,6 @@ export function ChatPage({ me, onSignOut, onSessionExpired }: Props) {
                 is typing…
               </p>
             )}
-            <div ref={endRef} />
           </div>
 
           {error && (
