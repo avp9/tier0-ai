@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { ApiError, MAX_MESSAGE_CHARS, api, waitText } from "./api";
+import { Avatar } from "./components/Avatar";
 import { MessageItem, type Item } from "./components/MessageItem";
 import { PendingActionPanel, hasControls } from "./components/PendingActionPanel";
 import { promptText, replyText } from "./format";
@@ -152,7 +153,7 @@ export function ChatPage({ me, onSignOut, onSessionExpired }: Props) {
       <header>
         <h1>Tier0 Help Desk</h1>
         <div className="who-am-i">
-          <span>{me.display_name}</span>
+          <Avatar me={me} />
           <button type="button" onClick={startOver} disabled={busy}>
             New conversation
           </button>

@@ -10,6 +10,7 @@ from tier0.api.deps import client_ip, current_user, same_origin
 from tier0.auth.passwords import MAX_PASSWORD_CHARS, spend_verification_time, verify_password
 from tier0.auth.sessions import COOKIE_NAME
 from tier0.auth.users import User
+from tier0.config import Gender
 
 log = logging.getLogger(__name__)
 
@@ -26,6 +27,7 @@ class LoginRequest(BaseModel):
 class Me(BaseModel):
     email: str
     display_name: str
+    gender: Gender | None = None
 
 
 @router.post("/login", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(same_origin)])
@@ -86,4 +88,4 @@ def logout(request: Request) -> Response:
 
 @router.get("/me", response_model=Me)
 def me(user: Annotated[User, Depends(current_user)]) -> Me:
-    return Me(email=user.email, display_name=user.display_name)
+    return Me(email=user.email, display_name=user.display_name, gender=user.gender)

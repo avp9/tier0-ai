@@ -105,7 +105,7 @@ export DEMO_USERS='[{"email":"alice@buzztech.example","name":"Alice Demo","passw
 uv run uvicorn --factory tier0.api.app:create_app_from_env --port 8000
 ```
 
-On start the app migrates the database (safe if several servers start together) and creates any demo user that doesn't exist yet; it never changes an existing account, so changing a password in `DEMO_USERS` does not alter an existing user.
+On start the app migrates the database (safe if several servers start together) and creates any demo user that doesn't exist yet; it never changes an existing account, so changing a password in `DEMO_USERS` does not alter an existing user. The one exception is `gender` (optional, `"male"` or `"female"`, which picks the header icon): an account that has none gets it filled in, and one that is already set is left alone.
 
 | Endpoint | Purpose |
 |---|---|

@@ -23,7 +23,9 @@ ALICE_PW, BOB_PW = "alice-demo-pass-1", "bob-demo-pass-22"
 
 def demo_users() -> list[DemoUser]:
     return [
-        DemoUser.model_validate({"email": ALICE, "name": "Alice Demo", "password": ALICE_PW}),
+        DemoUser.model_validate(
+            {"email": ALICE, "name": "Alice Demo", "password": ALICE_PW, "gender": "female"}
+        ),
         DemoUser.model_validate({"email": BOB, "name": "Bob Demo", "password": BOB_PW}),
     ]
 
@@ -60,6 +62,33 @@ def test_demo_users_are_created_with_hashed_passwords(
     assert [r[0] for r in rows] == [ALICE, BOB]
     assert all(r[1].startswith("$argon2") for r in rows)
     assert ALICE_PW not in "".join(r[1] for r in rows)
+
+
+def test_a_missing_gender_is_filled_in_on_restart_but_a_set_one_is_never_changed(
+    migrated_database: str,
+) -> None:
+    def start(gender: str | None) -> Any:
+        user = {"email": ALICE, "name": "Alice Demo", "password": ALICE_PW, "gender": gender}
+        settings = make_settings(migrated_database, demo_users=[DemoUser.model_validate(user)])
+        return TestClient(create_app(settings))
+
+    def gender_after_login(c: TestClient) -> Any:
+        assert login(c).status_code == 204
+        return c.get("/api/auth/me").json()["gender"]
+
+    with start(None) as c:  # an account made before genders existed
+        assert gender_after_login(c) is None
+    with start("female") as c:
+        assert gender_after_login(c) == "female"
+    with start("male") as c:
+        assert gender_after_login(c) == "female"
+
+
+def test_only_male_and_female_are_accepted_as_a_gender() -> None:
+    with pytest.raises(ValueError, match="gender"):
+        DemoUser.model_validate(
+            {"email": ALICE, "name": "Alice", "password": ALICE_PW, "gender": "robot"}
+        )
 
 
 def test_restarting_neither_duplicates_nor_overwrites_existing_users(
@@ -186,7 +215,7 @@ def test_no_secret_reaches_responses_or_logs(
     everything = caplog.text + failed.text + ok.text + me.text
     for secret in ("wrong-guess-password", ALICE_PW, SECRET, "argon2"):
         assert secret not in everything
-    assert set(me.json()) == {"email", "display_name"}
+    assert set(me.json()) == {"email", "display_name", "gender"}
 
 
 # --- rate limiting -------------------------------------------------------------------
@@ -217,7 +246,16 @@ def test_a_successful_login_resets_the_failure_count(client: TestClient) -> None
 def test_me_returns_the_signed_in_employee_only(client: TestClient) -> None:
     assert client.get("/api/auth/me").status_code == 401
     login(client)
-    assert client.get("/api/auth/me").json() == {"email": ALICE, "display_name": "Alice Demo"}
+    assert client.get("/api/auth/me").json() == {
+        "email": ALICE,
+        "display_name": "Alice Demo",
+        "gender": "female",
+    }
+
+
+def test_me_has_no_gender_for_an_employee_without_one(client: TestClient) -> None:
+    login(client, BOB, BOB_PW)
+    assert client.get("/api/auth/me").json()["gender"] is None
 
 
 @pytest.mark.parametrize("token", ["", "garbage", "a.b.c", "x" * 200])
