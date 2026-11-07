@@ -1,41 +1,46 @@
 :root {
-  --bg: #f4f5f7;
+  /* Palette sampled from the reference design: violet accent on a pale lavender page. */
+  --bg: #f8f7fd;
+  --bg-grad: linear-gradient(160deg, #f8f7fd 0%, #f3f1fc 55%, #f6f4ff 100%);
   --surface: #ffffff;
-  --text: #1a1d23;
-  --muted: #4b5563;
-  --border: #6b7280;
-  --line: #d1d5db;
-  --primary: #1d4ed8;
+  --text: #14121f;
+  --muted: #4c4c4d;
+  --border: #6b6b80;
+  --line: #e6e3f4;
+  --primary: #7c55fe;
   --on-primary: #ffffff;
-  --link: #1d4ed8;
-  --bubble-bot: #e8ebf0;
-  --on-bubble-bot: #1a1d23;
+  --link: #5b36e0;
+  --row-hover: #f6f4fe;
+  --row-active: #efecfb;
+  --card-shadow: 0 1px 2px rgb(40 20 120 / 0.06), 0 4px 18px rgb(40 20 120 / 0.06);
   --error-bg: #fef3f2;
   --error-text: #b42318;
-  --notice-bg: #eff6ff;
-  --notice-text: #1e3a8a;
-  --focus: #1d4ed8;
+  --notice-bg: #efeafe;
+  --notice-text: #3b2a96;
+  --focus: #5b36e0;
   color-scheme: light dark;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0f1115;
-    --surface: #181b21;
-    --text: #e7e9ee;
-    --muted: #a9b1bf;
-    --border: #8a93a3;
-    --line: #2f3540;
-    --primary: #2563eb;
+    --bg: #17142a;
+    --bg-grad: linear-gradient(160deg, #17142a 0%, #120f22 100%);
+    --surface: #1d1a30;
+    --text: #ece9fb;
+    --muted: #b4afcf;
+    --border: #8a85a8;
+    --line: #2e2a47;
+    --primary: #7c55fe;
     --on-primary: #ffffff;
-    --link: #8ab4ff;
-    --bubble-bot: #232830;
-    --on-bubble-bot: #e7e9ee;
+    --link: #b8a5ff;
+    --row-hover: #26223e;
+    --row-active: #2e2950;
+    --card-shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 18px rgb(0 0 0 / 0.25);
     --error-bg: #3a1a17;
     --error-text: #ffb4ab;
-    --notice-bg: #172554;
-    --notice-text: #bfdbfe;
-    --focus: #8ab4ff;
+    --notice-bg: #25204a;
+    --notice-text: #d9cfff;
+    --focus: #b8a5ff;
   }
 }
 
@@ -50,7 +55,10 @@ html {
 
 body {
   margin: 0;
+  min-height: 100dvh;
   background: var(--bg);
+  background-image: var(--bg-grad);
+  background-attachment: fixed;
   color: var(--text);
   font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
@@ -91,7 +99,7 @@ button {
   min-height: 44px;
   padding: 0 16px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 12px;
   background: var(--surface);
   color: var(--text);
   font: inherit;
@@ -114,7 +122,7 @@ textarea {
   width: 100%;
   padding: 10px 12px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 12px;
   background: var(--surface);
   color: var(--text);
   font: inherit;
@@ -148,8 +156,11 @@ label {
 /* Sign in */
 .login {
   max-width: 420px;
-  margin: 0 auto;
-  padding: 48px 16px;
+  margin: 8vh auto 0;
+  padding: 32px 28px;
+  border-radius: 20px;
+  background: var(--surface);
+  box-shadow: var(--card-shadow);
 }
 
 .login .lede {
@@ -162,40 +173,157 @@ label {
   margin-top: 24px;
 }
 
-/* Chat: the whole page scrolls; the header and the message box stay in view. */
+/* Chat: a history panel beside the conversation, each a white card on the lavender page. */
+.app {
+  display: flex;
+  gap: 16px;
+  height: 100dvh;
+  padding: 12px;
+}
+
+.sidebar {
+  display: flex;
+  flex: 0 0 300px;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0;
+  padding: 20px 16px 12px;
+  border-radius: 20px;
+  background: var(--surface);
+  box-shadow: var(--card-shadow);
+}
+
+.sidebar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px;
+}
+
+.sidebar-head h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+}
+
+.new-chat {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--on-primary);
+  font-size: 1.0625rem;
+}
+
+.history {
+  flex: 1;
+  min-height: 0;
+  margin: 0 -8px;
+  padding: 0 8px;
+  overflow-y: auto;
+}
+
+.history ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.group-label {
+  margin: 20px 0 6px;
+  padding: 0 14px;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.history a {
+  display: block;
+  padding: 10px 14px;
+  overflow: hidden;
+  border-radius: 12px;
+  color: var(--text);
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history a:hover {
+  background: var(--row-hover);
+}
+
+.history a[aria-current="true"] {
+  background: var(--row-active);
+}
+
+.history a[aria-disabled="true"] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.history-empty {
+  margin: 8px 14px;
+  color: var(--muted);
+}
+
 .chat {
   display: flex;
+  flex: 1;
   flex-direction: column;
-  min-height: 100dvh;
-  max-width: 760px;
-  margin: 0 auto;
-  background: var(--surface);
+  min-width: 0;
+  height: 100%;
 }
 
 .chat header {
-  position: sticky;
-  top: 0;
-  z-index: 2;
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px 16px;
+  gap: 12px;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 16px;
-  border-bottom: 1px solid var(--line);
-  background: var(--surface);
+  padding: 4px 8px 4px 12px;
+}
+
+.chat header .title {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+
+.chat header h1 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .who-am-i {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  flex: none;
+  gap: 10px;
   align-items: center;
   color: var(--muted);
 }
 
 .who-am-i button {
-  padding: 0 12px;
+  padding: 0 14px;
+}
+
+.quiet {
+  border-color: transparent;
+  box-shadow: var(--card-shadow);
 }
 
 .avatar-wrap {
@@ -209,7 +337,7 @@ label {
   height: 44px;
   border: 1px solid var(--line);
   border-radius: 50%;
-  background: var(--bubble-bot);
+  background: var(--row-active);
   color: var(--muted);
   padding: 0;
   overflow: hidden;
@@ -276,12 +404,33 @@ label {
   display: flex;
   flex: 1;
   flex-direction: column;
-  padding: 0 16px;
+  width: 100%;
+  min-height: 0;
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 0 8px;
 }
 
 .log {
+  display: flex;
   flex: 1;
-  padding: 16px 0 4px;
+  flex-direction: column;
+  min-height: 0;
+  padding: 16px 4px 4px;
+  overflow-y: auto;
+}
+
+.welcome {
+  margin: auto;
+  max-width: 640px;
+  text-align: center;
+}
+
+.welcome-title {
+  margin: 0 0 8px;
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  font-weight: 600;
+  line-height: 1.2;
 }
 
 .log ol,
@@ -316,7 +465,7 @@ label {
   max-width: 85%;
   margin: 0;
   padding: 10px 14px;
-  border-radius: 14px;
+  border-radius: 16px;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
@@ -327,8 +476,9 @@ label {
 }
 
 .theirs .bubble {
-  background: var(--bubble-bot);
-  color: var(--on-bubble-bot);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--card-shadow);
 }
 
 .sources {
@@ -408,8 +558,9 @@ label {
   margin-bottom: 12px;
   padding: 14px 16px;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 16px;
   background: var(--surface);
+  box-shadow: var(--card-shadow);
 }
 
 .card dl {
@@ -463,28 +614,36 @@ label {
 }
 
 .composer {
-  position: sticky;
-  bottom: 0;
-  z-index: 2;
   display: grid;
   grid-template-columns: 1fr auto;
   grid-template-areas:
-    "box send"
-    "hint hint";
-  gap: 4px 8px;
-  align-items: end;
-  margin: 0 -16px;
-  padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
-  border-top: 1px solid var(--line);
+    "box box"
+    "hint send";
+  gap: 4px 12px;
+  align-items: center;
+  margin: 8px 0 16px;
+  padding: 16px 16px 12px 20px;
+  border-radius: 20px;
   background: var(--surface);
+  box-shadow: var(--card-shadow);
+}
+
+.composer:focus-within {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
 }
 
 .composer textarea {
   grid-area: box;
+  padding: 4px 0;
+  border: 0;
+  outline: none; /* the card shows the focus ring instead */
+  background: transparent;
+  resize: none;
 }
 
-.composer button {
-  grid-area: send;
+.composer textarea::placeholder {
+  color: var(--border);
 }
 
 .composer .hint {
@@ -494,7 +653,38 @@ label {
   font-size: 0.8125rem;
 }
 
-.composer textarea {
-  resize: vertical;
+.send {
+  display: grid;
+  grid-area: send;
+  place-items: center;
+  width: 48px;
+  min-height: 48px;
+  padding: 0;
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--on-primary);
 }
 
+/* On a phone the history slides over the chat instead of sitting beside it. */
+@media (max-width: 899px) {
+  .app {
+    gap: 0;
+    padding: 0;
+  }
+
+  .sidebar {
+    position: fixed;
+    inset: 8px auto 8px 8px;
+    z-index: 20;
+    width: min(320px, calc(100vw - 16px));
+    box-shadow: 0 8px 32px rgb(40 20 120 / 0.28);
+  }
+
+  .chat {
+    padding: 8px 8px 0;
+  }
+
+  .composer {
+    margin-bottom: calc(8px + env(safe-area-inset-bottom));
+  }
+}

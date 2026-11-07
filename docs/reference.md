@@ -123,6 +123,7 @@ Sessions are signed, `HttpOnly`, `SameSite=Lax` cookies (also `Secure` unless `A
 |---|---|
 | `POST /api/chat` | `{thread_id?, message}` -> reply, intent, sources, `pending_action` (what the agent is waiting for), and `ticket` once one is created. Omit `thread_id` to start a conversation. |
 | `GET /api/chat/{thread_id}` | The conversation so far and any open question, for a thread you own (otherwise `404`). |
+| `GET /api/conversations` | The signed-in employee's chats, newest first, as `[{thread_id, title, updated_at}]` for the history sidebar (up to 50). The title is the first message, cut to 80 characters. Only your own chats are listed. |
 
 The employee is always the signed-in one; nothing in the request body can change who a ticket is for. Buttons in the UI simply send `yes`, `no` or a ticket key as ordinary messages. Messages are limited to 2000 characters and 20 per minute per employee.
 

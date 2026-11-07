@@ -40,13 +40,13 @@ def test_upgrade_creates_the_tables_and_is_repeatable(empty_database: str) -> No
     assert current_revision(empty_database) is None
     upgrade_to_head(empty_database)
     upgrade_to_head(empty_database)
-    assert {"users", "ticket_submissions"} <= tables(empty_database)
+    assert {"users", "ticket_submissions", "conversations"} <= tables(empty_database)
     assert current_revision(empty_database) == head_revision()
 
 
 def test_downgrade_removes_the_tables(migrated_database: str) -> None:
     downgrade_to_base(migrated_database)
-    assert not {"users", "ticket_submissions"} & tables(migrated_database)
+    assert not {"users", "ticket_submissions", "conversations"} & tables(migrated_database)
 
 
 def test_percent_encoded_passwords_in_the_url_survive_alembic_config() -> None:

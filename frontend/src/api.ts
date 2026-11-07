@@ -1,4 +1,4 @@
-import type { ChatResponse, HistoryResponse, Me } from "./types";
+import type { ChatResponse, Conversation, HistoryResponse, Me } from "./types";
 
 export const MAX_MESSAGE_CHARS = 2000;
 
@@ -158,6 +158,7 @@ export const api = {
     threadId: string | null,
     onToken: (text: string) => void = () => {},
   ) => sendChat(message, threadId, onToken),
+  conversations: () => request<Conversation[]>("/api/conversations"),
   history: (threadId: string) => request<HistoryResponse>(`/api/chat/${encodeURIComponent(threadId)}`),
 };
 

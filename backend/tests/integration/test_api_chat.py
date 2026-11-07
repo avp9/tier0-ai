@@ -3,7 +3,7 @@ import threading
 import uuid
 from collections.abc import Iterator
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from agent_harness import ALICE, ANSWERABLE, BOB, GAP, Harness
@@ -127,6 +127,77 @@ def test_a_failure_while_streaming_ends_with_an_error_event_and_no_details(
     ((name, data),) = parse_sse(response.text)
     assert name == "error" and "secret" not in response.text
     assert data == {"detail": "Something went wrong. Please try again."}
+
+
+# --- the chat history ----------------------------------------------------------------
+
+
+def history(client: TestClient) -> list[dict[str, Any]]:
+    response = client.get("/api/conversations")
+    assert response.status_code == 200
+    return cast("list[dict[str, Any]]", response.json())
+
+
+def test_the_history_needs_a_signed_in_employee(app: Any) -> None:
+    with TestClient(app) as anonymous:
+        assert anonymous.get("/api/conversations").status_code == 401
+
+
+def test_a_new_employee_has_an_empty_history(alice: TestClient) -> None:
+    assert history(alice) == []
+
+
+def test_a_chat_is_listed_under_its_first_message_and_later_turns_keep_that_title(
+    alice: TestClient,
+) -> None:
+    first = chat(alice, ANSWERABLE).json()["thread_id"]
+    chat(alice, GAP, first)
+    (item,) = history(alice)
+    assert item["thread_id"] == first and item["title"] == ANSWERABLE
+    assert set(item) == {"thread_id", "title", "updated_at"}
+
+
+def test_the_most_recently_used_chat_comes_first(alice: TestClient) -> None:
+    older = chat(alice, ANSWERABLE).json()["thread_id"]
+    newer = chat(alice, GAP).json()["thread_id"]
+    assert [c["thread_id"] for c in history(alice)] == [newer, older]
+    chat(alice, ANSWERABLE, older)  # using the older one again moves it to the top
+    assert [c["thread_id"] for c in history(alice)] == [older, newer]
+
+
+def test_an_employee_never_sees_another_employees_chats(app: Any) -> None:
+    with TestClient(app) as alice_client:
+        sign_in(alice_client, ALICE)
+        chat(alice_client, ANSWERABLE)
+        assert len(history(alice_client)) == 1
+    with TestClient(app) as bob_client:
+        sign_in(bob_client, BOB)
+        assert history(bob_client) == []
+
+
+def test_a_streamed_turn_is_recorded_too(alice: TestClient) -> None:
+    response = alice.post("/api/chat", json={"message": ANSWERABLE}, headers=STREAM)
+    thread = parse_sse(response.text)[-1][1]["thread_id"]
+    assert [c["thread_id"] for c in history(alice)] == [thread]
+
+
+def test_a_failure_to_record_the_history_never_fails_the_chat(
+    alice: TestClient, app: Any, caplog: pytest.LogCaptureFixture
+) -> None:
+    def broken(*_a: Any, **_k: Any) -> None:
+        raise RuntimeError("history is down")
+
+    app.state.conversations.touch = broken
+    response = chat(alice, ANSWERABLE)
+    assert response.status_code == 200 and response.json()["reply"]
+    streamed = alice.post("/api/chat", json={"message": ANSWERABLE}, headers=STREAM)
+    assert parse_sse(streamed.text)[-1][0] == "done"
+    assert "could not record the conversation" in caplog.text
+
+
+def test_a_refused_message_is_not_recorded(alice: TestClient) -> None:
+    assert alice.post("/api/chat", json={"message": "  "}).status_code == 422
+    assert history(alice) == []
 
 
 # --- authentication ------------------------------------------------------------------
