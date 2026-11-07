@@ -249,6 +249,46 @@ def test_an_edit_can_be_streamed_and_is_refused_up_front_when_not_allowed(
     assert refused.status_code == 409  # a status code, not a stream that fails half way
 
 
+# --- looking through several tickets -----------------------------------------------------
+
+
+def listed_tickets(client: TestClient, harness: Harness) -> tuple[str, list[str]]:
+    first = harness.add_ticket(ALICE, "Laptop slow")
+    second = harness.add_ticket(ALICE, "Printer offline")
+    response = chat(client, "show my tickets").json()
+    assert response["pending_action"]["type"] == "select_ticket"
+    return response["thread_id"], [first, second]
+
+
+def test_the_list_of_tickets_stays_after_one_is_shown(alice: TestClient, harness: Harness) -> None:
+    thread, (first, second) = listed_tickets(alice, harness)
+    shown = chat(alice, first, thread).json()
+    assert first in shown["reply"] and "Laptop slow" in shown["reply"]
+    action = shown["pending_action"]
+    assert action["type"] == "select_ticket"
+    assert [o["ticket_key"] for o in action["options"]] == [second, first]
+    assert {o["title"] for o in action["options"]} == {"Laptop slow", "Printer offline"}
+
+
+def test_tickets_can_be_looked_at_one_after_another_and_the_list_survives_a_reload(
+    alice: TestClient, harness: Harness
+) -> None:
+    thread, (first, second) = listed_tickets(alice, harness)
+    for key in (first, second, first):
+        shown = chat(alice, key, thread).json()
+        assert key in shown["reply"] and shown["pending_action"]["type"] == "select_ticket"
+    reloaded = alice.get(f"/api/chat/{thread}").json()["pending_action"]
+    assert reloaded["type"] == "select_ticket" and len(reloaded["options"]) == 2
+
+
+def test_saying_done_closes_the_list(alice: TestClient, harness: Harness) -> None:
+    thread, (first, _) = listed_tickets(alice, harness)
+    chat(alice, first, thread)
+    closed = chat(alice, "done", thread).json()
+    assert closed["pending_action"] is None
+    assert alice.get(f"/api/chat/{thread}").json()["pending_action"] is None
+
+
 # --- the chat history ----------------------------------------------------------------
 
 
@@ -385,7 +425,8 @@ def test_the_ticket_list_offers_titles_and_statuses_to_choose_from(
         {"ticket_key": first, "title": "Laptop slow", "status": "Open"},
     ]
     picked = chat(alice, second, listing["thread_id"]).json()
-    assert "Printer offline" in picked["reply"] and picked["pending_action"] is None
+    assert "Printer offline" in picked["reply"]
+    assert picked["pending_action"]["options"] == action["options"]  # the list stays
 
 
 def test_small_talk_and_unknown_intent_values_map_to_names(alice: TestClient) -> None:

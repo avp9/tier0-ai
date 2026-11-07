@@ -337,16 +337,110 @@ def test_with_several_tickets_the_employee_picks_one_by_position(h: Harness) -> 
     assert listing.workflow is WorkflowStatus.AWAITING_TICKET_SELECTION
     detail = h.say("the second one")
     assert first in detail.reply and "Laptop slow" in detail.reply
-    assert detail.awaiting is None and detail.workflow is WorkflowStatus.IDLE
+    # The list stays, so the employee can look at another ticket straight away.
+    assert detail.awaiting is Awaiting.SELECT_TICKET and detail.options == [second, first]
+    assert detail.workflow is WorkflowStatus.AWAITING_TICKET_SELECTION
 
 
 def test_picking_by_key_works_and_unclear_picks_are_asked_again(h: Harness) -> None:
-    first, second = h.add_ticket(ALICE, "Laptop slow"), h.add_ticket(ALICE, "Printer offline")
+    first = h.add_ticket(ALICE, "Laptop slow")
+    h.add_ticket(ALICE, "Printer offline")
     h.say("show my tickets")
     again = h.say("the vpn one")
     assert again.awaiting is Awaiting.SELECT_TICKET and again.reply.startswith(replies.RESELECT)
     assert first in h.say(first.lower()).reply
-    assert second not in h.say("hello").reply  # the conversation moved on cleanly
+    finished = h.say("done")
+    assert finished.reply == replies.SELECTION_CANCELLED and finished.awaiting is None
+    assert finished.workflow is WorkflowStatus.IDLE
+
+
+def two_tickets(h: Harness) -> tuple[str, str]:
+    first, second = h.add_ticket(ALICE, "Laptop slow"), h.add_ticket(ALICE, "Printer offline")
+    h.say("show my tickets")
+    return first, second
+
+
+def test_the_employee_can_look_at_several_tickets_one_after_another(h: Harness) -> None:
+    first, second = two_tickets(h)
+    one = h.say(first)
+    two = h.say(second)
+    three = h.say("the second one")  # the list is newest first, so this is the older ticket
+    for turn, key in ((one, first), (two, second), (three, first)):
+        assert key in turn.reply
+        assert turn.awaiting is Awaiting.SELECT_TICKET and turn.options == [second, first]
+
+
+def test_each_ticket_shown_is_kept_in_the_conversation(h: Harness) -> None:
+    first, second = two_tickets(h)
+    h.say(first)
+    h.say(second)
+    h.say("done")
+    said = [t.content for t in h.agent.history(thread_id="t1", requester_email=ALICE).messages]
+    assert sum(first in text and "Laptop slow" in text for text in said) >= 1
+    assert sum(second in text and "Printer offline" in text for text in said) >= 1
+    assert said[-1] == replies.SELECTION_CANCELLED
+    assert sum(text == replies.SELECTION_CANCELLED for text in said) == 1  # no duplicate replies
+
+
+@pytest.mark.parametrize(
+    "words", ["done", "Done.", "I'm done", "that's all", "no more", "nothing else", "finished"]
+)
+def test_saying_the_employee_is_done_leaves_the_list(h: Harness, words: str) -> None:
+    first, _ = two_tickets(h)
+    h.say(first)
+    turn = h.say(words)
+    assert turn.reply == replies.SELECTION_CANCELLED
+    assert turn.awaiting is None and turn.workflow is WorkflowStatus.IDLE
+
+
+def test_a_question_about_being_done_is_not_taken_as_done(h: Harness) -> None:
+    two_tickets(h)
+    turn = h.say("am I done?")
+    assert turn.awaiting is Awaiting.SELECT_TICKET and turn.reply.startswith(replies.RESELECT)
+
+
+def test_after_leaving_the_list_a_new_request_starts_fresh(h: Harness) -> None:
+    first, _ = two_tickets(h)
+    h.say(first)
+    h.say("done")
+    answer = h.say(ANSWERABLE)
+    assert answer.awaiting is None and answer.reply.endswith(
+        "Sources: Documents to Bring on Your First Day"
+    )
+
+
+def test_picking_a_ticket_gives_the_employee_a_fresh_chance_to_get_one_wrong(h: Harness) -> None:
+    first, _ = two_tickets(h)
+    h.say("hmm")  # one miss: asked again
+    h.say(first)  # a good pick resets the count
+    again = h.say("hmm")  # a miss again, but not the limit, so the list is still there
+    assert again.awaiting is Awaiting.SELECT_TICKET and again.reply.startswith(replies.RESELECT)
+
+
+def test_the_list_is_still_there_after_a_reload(h: Harness) -> None:
+    first, second = two_tickets(h)
+    shown = h.say(first)
+    view = h.agent.history(thread_id="t1", requester_email=ALICE)
+    assert view.pending is not None and view.pending.awaiting is Awaiting.SELECT_TICKET
+    assert view.pending.options == [second, first] and first in view.pending.reply
+    assert shown.reply == view.pending.reply
+
+
+def test_a_ticket_that_cannot_be_loaded_leaves_the_list_so_the_employee_can_try_again(
+    h: Harness,
+) -> None:
+    first, _ = two_tickets(h)
+    h.adapter.fail_next(TicketServiceUnavailable("down"))
+    failed = h.say(first)
+    assert failed.awaiting is Awaiting.SELECT_TICKET
+    assert first in h.say(first).reply  # the next try works
+
+
+def test_someone_elses_ticket_is_never_shown_from_the_list(h: Harness) -> None:
+    first, _ = two_tickets(h)
+    theirs = h.add_ticket(BOB, "Bob's secret")
+    turn = h.say(theirs)
+    assert "secret" not in turn.reply and turn.awaiting is Awaiting.SELECT_TICKET
 
 
 def test_ignoring_the_ticket_list_twice_treats_the_message_as_a_new_request(h: Harness) -> None:

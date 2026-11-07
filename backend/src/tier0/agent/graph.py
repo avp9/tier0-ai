@@ -23,7 +23,7 @@ from tier0.intent.types import (
 )
 from tier0.rag.answering import AnswerService, Outcome
 from tier0.rag.rewrite import QuestionRewriter
-from tier0.tickets.confirmation import Reply, interpret, wants_to_cancel
+from tier0.tickets.confirmation import Reply, interpret, wants_to_cancel, wants_to_finish
 from tier0.tickets.drafting import TicketDrafter
 from tier0.tickets.status import (
     NOT_FOUND_REPLY,
@@ -227,7 +227,8 @@ class Conversation:
     def after_select(state: TicketFlowState) -> str:
         if state.get("selected_ticket_key"):
             return "show_details"
-        if wants_to_cancel(state.get("user_message", "")):
+        message = state.get("user_message", "")
+        if wants_to_cancel(message) or wants_to_finish(message):
             return "cancel_selection"
         if state.get("selection_attempts", 0) >= MAX_SELECTION_TRIES:
             return "reroute"
@@ -239,9 +240,14 @@ class Conversation:
         return {"reply": replies.RESELECT + format_choices(choices)}
 
     def show_details(self, state: TicketFlowState) -> dict[str, Any]:
+        """Show the chosen ticket, then offer the same list again: they may want to look at others.
+
+        The details become the next question's prompt (the ``select`` step records them in the
+        conversation when it is answered), and the employee leaves the list by saying they are done.
+        """
         key = str(state.get("selected_ticket_key"))
         result = self._deps.status.details(key, state["requester_email"])
-        return {**_say(result.reply), "ticket_choices": [], "selected_ticket_key": None}
+        return {"reply": result.reply, "selected_ticket_key": None, "selection_attempts": 0}
 
     @staticmethod
     def cancel_selection(state: TicketFlowState) -> dict[str, Any]:
@@ -303,9 +309,9 @@ def build_conversation_graph(
         route("show_details", "cancel_selection", "reselect", "reroute"),
     )  # fmt: skip
     graph.add_edge("reselect", "select")
+    graph.add_edge("show_details", "select")  # the list stays until the employee is done with it
     for terminal in (
         "decline_offer",
-        "show_details",
         "cancel_selection",
         "smalltalk",
         "out_of_scope",

@@ -46,7 +46,67 @@ test("AT-11 several tickets are listed and the employee chooses one", async ({
   await expect(choose).toBeVisible();
   await choose.getByRole("button", { name: new RegExp(first) }).click();
   await expect(conversation(page)).toContainText("Printer offline");
+  // The list stays, with every ticket still there, so another can be looked at.
+  await expect(choose).toBeVisible();
+  await expect(choose.getByRole("button")).toHaveCount(4); // two tickets, Done and Close
+});
+
+test("AT-11 several tickets can be looked at one after another, then the list is closed", async ({
+  page,
+  controls,
+}) => {
+  const first = await controls.seed({ email: ALICE.email, summary: "Printer offline" });
+  const second = await controls.seed({ email: ALICE.email, summary: "Outlook keeps crashing" });
+  await say(page, "What is the status of my tickets?");
+  const choose = page.getByRole("region", { name: "Choose a ticket" });
+  const box = page.getByRole("textbox", { name: /message/i });
+  await expect(choose).toBeVisible();
+
+  await choose.getByRole("button", { name: new RegExp(first) }).click();
+  await expect(conversation(page)).toContainText("Printer offline");
+  await choose.getByRole("button", { name: new RegExp(second) }).click();
+  await expect(conversation(page)).toContainText("Outlook keeps crashing");
+  await choose.getByRole("button", { name: new RegExp(first) }).click(); // and back again
+  await expect(choose).toBeVisible();
+  await expect(box).toBeDisabled(); // the list is still waiting for an answer
+
+  await choose.getByRole("button", { name: "Done" }).click();
   await expect(choose).toHaveCount(0);
+  await expect(box).toBeEnabled();
+});
+
+test("AT-11 the ticket list can be closed with its close button", async ({ page, controls }) => {
+  const first = await controls.seed({ email: ALICE.email, summary: "Printer offline" });
+  await controls.seed({ email: ALICE.email, summary: "Outlook keeps crashing" });
+  await say(page, "What is the status of my tickets?");
+  const choose = page.getByRole("region", { name: "Choose a ticket" });
+  await choose.getByRole("button", { name: new RegExp(first) }).click();
+  await expect(conversation(page)).toContainText("Printer offline");
+  await choose.getByRole("button", { name: "Close ticket list" }).click();
+  await expect(choose).toHaveCount(0);
+  await expect(page.getByRole("textbox", { name: /message/i })).toBeEnabled();
+});
+
+test("AT-11 the ticket list is still there after a page reload", async ({ page, controls }) => {
+  const first = await controls.seed({ email: ALICE.email, summary: "Printer offline" });
+  await controls.seed({ email: ALICE.email, summary: "Outlook keeps crashing" });
+  await say(page, "What is the status of my tickets?");
+  const choose = page.getByRole("region", { name: "Choose a ticket" });
+  await choose.getByRole("button", { name: new RegExp(first) }).click();
+  await expect(conversation(page)).toContainText("Printer offline");
+  await page.reload();
+  await expect(page.getByRole("region", { name: "Choose a ticket" })).toBeVisible();
+});
+
+test("AT-11 pressing a ticket keeps keyboard focus on it", async ({ page, controls }) => {
+  await controls.seed({ email: ALICE.email, summary: "Printer offline" });
+  const second = await controls.seed({ email: ALICE.email, summary: "Outlook keeps crashing" });
+  await say(page, "What is the status of my tickets?");
+  const choose = page.getByRole("region", { name: "Choose a ticket" });
+  const button = choose.getByRole("button", { name: new RegExp(second) });
+  await button.click();
+  await expect(conversation(page)).toContainText("Outlook keeps crashing");
+  await expect(button).toBeFocused();
 });
 
 test("AT-12 no tickets gives a clear no-results answer", async ({ page }) => {
