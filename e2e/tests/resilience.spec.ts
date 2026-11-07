@@ -19,7 +19,7 @@ test("AT-14 an intent classifier outage is reported and the next message works",
 test("AT-14 a language model outage never invents an answer", async ({ page, controls }) => {
   await controls.fail("llm", 5);
   await say(page, "Unable to reset password via self-service portal");
-  await expect(page.getByRole("status").filter({ hasText: /thinking/i })).toHaveCount(0);
+  await expect(page.getByRole("status").filter({ hasText: /typing/i })).toHaveCount(0);
   await expect(conversation(page)).not.toContainText("Here is what our knowledge base says");
   await controls.reset();
   await say(page, "Unable to reset password via self-service portal");

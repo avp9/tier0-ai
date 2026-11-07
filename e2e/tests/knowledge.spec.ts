@@ -37,7 +37,7 @@ test("AT-15 a follow-up keeps the session context without repeating the email", 
   await expect(conversation(page)).toContainText("Here is what our knowledge base says");
   await say(page, "and what about from home");
   await expect(conversation(page)).not.toContainText(/your email/i);
-  await expect(page.getByRole("status").filter({ hasText: /thinking/i })).toHaveCount(0);
+  await expect(page.getByRole("status").filter({ hasText: /typing/i })).toHaveCount(0);
   const replies = await conversation(page).getByText(/knowledge base|couldn't find/).count();
   expect(replies).toBeGreaterThanOrEqual(2);
 });
@@ -70,7 +70,7 @@ test("AT-16 instructions hidden in a question cannot create or redirect a ticket
 
 test("AT-16 a bare 'yes' with nothing pending creates nothing", async ({ page, controls }) => {
   await say(page, "yes");
-  await expect(page.getByRole("status").filter({ hasText: /thinking/i })).toHaveCount(0);
+  await expect(page.getByRole("status").filter({ hasText: /typing/i })).toHaveCount(0);
   await expect(conversation(page)).not.toContainText("Done. I've created");
   expect(await controls.tickets()).toEqual([]);
 });

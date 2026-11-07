@@ -78,7 +78,7 @@ test("AT-18 a lost response is reconciled and never creates a duplicate", async 
   await expect(page.getByRole("group", { name: "Created ticket" })).toBeVisible();
   expect(await controls.tickets()).toHaveLength(1);
   await say(page, "yes"); // a repeated confirmation with nothing pending
-  await expect(page.getByRole("status").filter({ hasText: /thinking/i })).toHaveCount(0);
+  await expect(page.getByRole("status").filter({ hasText: /typing/i })).toHaveCount(0);
   expect(await controls.tickets()).toHaveLength(1);
 });
 
