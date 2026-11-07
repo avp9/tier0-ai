@@ -8,6 +8,7 @@ from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import interrupt
+from pydantic import ValidationError
 
 from tier0.agent.state import (
     AgentState,
@@ -18,7 +19,7 @@ from tier0.agent.state import (
 )
 from tier0.intent.types import Turn
 from tier0.tickets.confirmation import Reply, interpret, wants_to_cancel
-from tier0.tickets.drafting import TicketDrafter, format_preview, next_question
+from tier0.tickets.drafting import TicketDrafter, TicketEdit, format_preview, next_question
 from tier0.tickets.models import Category, CreatedTicket
 from tier0.tickets.submission import TicketSubmissionService
 
@@ -42,10 +43,15 @@ GAVE_UP_CONFIRM_REPLY = (
 )
 
 
+EDITED_TEXT = "I edited the ticket."  # what the conversation records for an edit made in the form
+EDITED = "edited"  # a ``confirmation`` value, next to Reply's yes / no / unclear
+
+
 class TicketFlowState(AgentState, total=False):
     confirmation: str
     confirmation_attempts: int
     detail_questions: int
+    submit_attempted: bool  # a send was tried: the ticket may exist, so it can no longer be edited
 
 
 def _assistant(text: str) -> Turn:
@@ -111,19 +117,58 @@ class TicketCreationFlow:
     def confirm(self, state: TicketFlowState) -> dict[str, Any]:
         pending = state.get("pending_ticket") or PendingTicket()
         prompt = state.get("reply", "")
+        editable = not state.get("submit_attempted", False)
         answer = interrupt(
             {
                 "type": "confirm_ticket",
                 "prompt": prompt,
                 "preview": format_preview(state["requester_email"], pending),
+                "editable": editable,
             }
         )
+        if isinstance(answer, dict):  # the form's "save changes", not a typed reply
+            return self._edit(state, pending, prompt, answer, editable)
         return {
             "turns": [_assistant(prompt), _user(answer)],
             "user_message": answer,
             "confirmation": interpret(answer).value,
             "confirmation_attempts": state.get("confirmation_attempts", 0) + 1,
         }
+
+    @staticmethod
+    def _edit(
+        state: TicketFlowState,
+        pending: PendingTicket,
+        prompt: str,
+        answer: dict[str, Any],
+        editable: bool,
+    ) -> dict[str, Any]:
+        """Apply the employee's edits. The API checks first; this holds even if it was bypassed."""
+        turns = [_assistant(prompt), _user(EDITED_TEXT)]
+        attempts = state.get("confirmation_attempts", 0) + 1
+        try:
+            edit = TicketEdit.model_validate(answer.get("edit"))
+        except ValidationError:
+            edit = None
+        if edit is None or not editable:  # nothing changes and nothing is sent
+            return {
+                "turns": turns,
+                "user_message": EDITED_TEXT,
+                "confirmation": Reply.UNCLEAR.value,
+                "confirmation_attempts": attempts,
+            }
+        return {
+            "turns": turns,
+            "user_message": EDITED_TEXT,
+            "pending_ticket": edit.apply_to(pending),
+            "confirmation": EDITED,
+            "confirmation_attempts": 0,  # an edit is a deliberate act, not a failed answer
+        }
+
+    def edited(self, state: TicketFlowState) -> dict[str, Any]:
+        """Show the ticket again with the employee's changes, then ask once more."""
+        pending = state.get("pending_ticket") or PendingTicket()
+        return {"reply": format_preview(state["requester_email"], pending)}
 
     def reprompt(self, state: TicketFlowState) -> dict[str, Any]:
         return {"reply": CLARIFY_REPLY}
@@ -142,6 +187,7 @@ class TicketCreationFlow:
                     WorkflowStatus.SUBMITTING_TICKET, WorkflowStatus.AWAITING_TICKET_CONFIRMATION
                 ),
                 "reply": result.reply,
+                "submit_attempted": True,  # it may exist now: editing would risk a duplicate
             }
         update = self._finish(result.reply)
         if result.has_ticket and result.ticket_key:
@@ -167,6 +213,7 @@ class TicketCreationFlow:
             "confirmation": "",
             "confirmation_attempts": 0,
             "detail_questions": 0,
+            "submit_attempted": False,
         }
 
     # --- routing ----------------------------------------------------------------------
@@ -185,7 +232,11 @@ class TicketCreationFlow:
         return "cancel" if wants_to_cancel(state.get("user_message", "")) else "draft"
 
     @staticmethod
-    def after_confirm(state: TicketFlowState) -> Literal["submit", "cancel", "reprompt", "give_up"]:
+    def after_confirm(
+        state: TicketFlowState,
+    ) -> Literal["submit", "cancel", "reprompt", "give_up", "edited"]:
+        if state.get("confirmation") == EDITED:
+            return "edited"
         answer = Reply(state.get("confirmation", Reply.UNCLEAR.value))
         if answer is Reply.YES:
             return "submit"
@@ -223,6 +274,7 @@ def add_ticket_flow_nodes(
     for short, node in (
         ("draft", flow.draft), ("prepare_question", flow.prepare_question), ("ask", flow.ask),
         ("preview", flow.preview), ("confirm", flow.confirm), ("reprompt", flow.reprompt),
+        ("edited", flow.edited),
         ("submit", flow.submit), ("cancel", flow.cancel), ("give_up", flow.give_up),
     ):  # fmt: skip
         graph.add_node(name(short), node)
@@ -237,9 +289,12 @@ def add_ticket_flow_nodes(
     graph.add_conditional_edges(name("ask"), flow.after_ask, route("draft", "cancel"))
     graph.add_edge(name("preview"), name("confirm"))
     graph.add_conditional_edges(
-        name("confirm"), flow.after_confirm, route("submit", "cancel", "reprompt", "give_up")
+        name("confirm"),
+        flow.after_confirm,
+        route("submit", "cancel", "reprompt", "give_up", "edited"),
     )
     graph.add_edge(name("reprompt"), name("confirm"))
+    graph.add_edge(name("edited"), name("confirm"))
     graph.add_conditional_edges(
         name("submit"), flow.after_submit, route("confirm", "give_up", "__end__")
     )

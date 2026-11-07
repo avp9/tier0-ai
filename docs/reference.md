@@ -121,7 +121,7 @@ Sessions are signed, `HttpOnly`, `SameSite=Lax` cookies (also `Secure` unless `A
 
 | Endpoint | Purpose |
 |---|---|
-| `POST /api/chat` | `{thread_id?, message}` -> reply, intent, sources, `pending_action` (what the agent is waiting for), and `ticket` once one is created. Omit `thread_id` to start a conversation. |
+| `POST /api/chat` | `{thread_id?, message}` -> reply, intent, sources, `pending_action` (what the agent is waiting for; a ticket preview also says whether it is `editable`), and `ticket` once one is created. Omit `thread_id` to start a conversation. To change a ticket preview before it is sent, send `{thread_id, ticket_edit: {title, description, category, priority}}` instead of a `message` (all four fields; `priority` may be `null`): the preview is replaced and nothing is sent. `409` if no preview is showing, or if a send was already attempted (the ticket may exist, so it can no longer be edited). |
 | `GET /api/chat/{thread_id}` | The conversation so far and any open question, for a thread you own (otherwise `404`). |
 | `GET /api/conversations` | The signed-in employee's chats, newest first, as `[{thread_id, title, updated_at}]` for the history sidebar (up to 50). The title is the first message, cut to 80 characters. Only your own chats are listed. |
 

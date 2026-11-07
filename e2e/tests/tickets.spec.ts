@@ -108,3 +108,78 @@ test("AT-13 a ticket system outage is reported honestly and no ticket appears", 
   await expect(conversation(page)).toContainText(/couldn't|unable|try again/i);
   expect(await controls.tickets()).toEqual([]);
 });
+
+test("AT-19 the employee can edit the ticket before it is sent, and the edits are what is created", async ({
+  page,
+  controls,
+}) => {
+  await reachPreview(page);
+  const preview = page.getByRole("region", { name: "Ticket to be created" });
+  await preview.getByRole("button", { name: "Edit" }).click();
+  await preview.getByLabel("Title").fill("Laptop battery drains too fast");
+  await preview.getByLabel("Category").selectOption("HR");
+  await preview.getByLabel("Priority").selectOption("High");
+  await preview.getByLabel("Description").fill("Drains within an hour.\n\nAlready tried a new charger.");
+  await preview.getByRole("button", { name: "Save changes" }).click();
+
+  await expect(preview.getByLabel("Title")).toHaveCount(0); // back to the summary
+  await expect(preview).toContainText("Laptop battery drains too fast");
+  await expect(preview).toContainText("High");
+  await expect(conversation(page)).toContainText("I edited the ticket.");
+  expect(await controls.tickets()).toEqual([]); // saving an edit sends nothing
+
+  await page.getByRole("button", { name: "Create ticket" }).click();
+  await expect(page.getByRole("group", { name: "Created ticket" })).toContainText("SUP-");
+  const tickets = await controls.tickets();
+  expect(tickets).toHaveLength(1);
+  expect(tickets[0]).toMatchObject({
+    requester_email: ALICE.email,
+    summary: "Laptop battery drains too fast",
+    category: "HR",
+  });
+  expect(tickets[0]?.description).toContain("Already tried a new charger.");
+});
+
+test("AT-19 discarding an edit leaves the ticket as it was", async ({ page, controls }) => {
+  await reachPreview(page);
+  const preview = page.getByRole("region", { name: "Ticket to be created" });
+  await preview.getByRole("button", { name: "Edit" }).click();
+  await preview.getByLabel("Title").fill("Something else entirely");
+  await preview.getByRole("button", { name: "Discard changes" }).click();
+  await expect(preview).not.toContainText("Something else entirely");
+  await page.getByRole("button", { name: "Create ticket" }).click();
+  await expect(page.getByRole("group", { name: "Created ticket" })).toBeVisible();
+  expect((await controls.tickets())[0]?.summary).toContain("laptop battery");
+});
+
+test("AT-19 an edit survives a page reload", async ({ page, controls: _controls }) => {
+  await reachPreview(page);
+  const preview = page.getByRole("region", { name: "Ticket to be created" });
+  await preview.getByRole("button", { name: "Edit" }).click();
+  await preview.getByLabel("Title").fill("Edited before reload");
+  await preview.getByRole("button", { name: "Save changes" }).click();
+  await expect(preview).toContainText("Edited before reload");
+  await page.reload();
+  await expect(page.getByRole("region", { name: "Ticket to be created" })).toContainText(
+    "Edited before reload",
+  );
+});
+
+test("AT-19 once a send may have gone through the ticket can no longer be edited", async ({
+  page,
+  controls,
+}) => {
+  await reachPreview(page);
+  await expect(page.getByRole("button", { name: "Edit" })).toBeVisible();
+  await controls.fail("tickets_unknown_outcome");
+  await page.getByRole("button", { name: "Create ticket" }).click();
+  await expect(page.getByRole("region", { name: "Ticket to be created" })).toBeVisible();
+  // Editing now could make a second ticket if the first actually exists, so it is not offered.
+  await expect(page.getByRole("button", { name: "Edit" })).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole("region", { name: "Ticket to be created" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Edit" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Create ticket" }).click();
+  await expect(page.getByRole("group", { name: "Created ticket" })).toBeVisible();
+  expect(await controls.tickets()).toHaveLength(1);
+});

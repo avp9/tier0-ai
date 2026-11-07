@@ -1,5 +1,7 @@
+import assistantAvatar from "../assets/tier0-avatar.png";
 import { safeHttpUrl } from "../safeUrl";
-import type { Role, Source, TicketRef } from "../types";
+import type { Me, Role, Source, TicketRef } from "../types";
+import { Headshot } from "./Avatar";
 
 export interface Item {
   id: number;
@@ -28,29 +30,54 @@ function CreatedTicket({ ticket }: { ticket: TicketRef }) {
   );
 }
 
-/** ``live``: the text is still arriving, so screen readers wait for the final reply. */
-export function MessageItem({ item, live = false }: { item: Item; live?: boolean }) {
+/** Who is speaking: Tier0's own picture, or the employee's headshot (by their gender). */
+export function Speaker({ role, gender }: { role: Role; gender?: Me["gender"] }) {
+  if (role === "assistant") {
+    return <img className="speaker" src={assistantAvatar} alt="Tier0" width={36} height={36} />;
+  }
+  return (
+    <span className="speaker" role="img" aria-label="You">
+      <Headshot gender={gender} />
+    </span>
+  );
+}
+
+/**
+ * ``live``: the text is still arriving, so screen readers wait for the final reply.
+ * ``gender`` picks the employee's own icon.
+ */
+export function MessageItem({
+  item,
+  gender,
+  live = false,
+}: {
+  item: Item;
+  gender?: Me["gender"];
+  live?: boolean;
+}) {
   const mine = item.role === "user";
   return (
     <li className={`message ${mine ? "mine" : "theirs"}`} aria-live={live ? "off" : undefined}>
-      <span className="who">{mine ? "You" : "Tier0"}</span>
-      {/* Always a text node: replies can contain anything and must never be treated as HTML. */}
-      <p className="bubble">{item.text}</p>
-      {item.sources.length > 0 && (
-        <ul className="sources" aria-label="Sources">
-          {item.sources.map((source) => (
-            <li key={source.document_id}>
-              <span>{source.title}</span> <span className="category">{source.category}</span>
-              <span className="match-details">
-                KB article {source.document_id}
-                {source.source ? ` · Source: ${source.source}` : ""}
-                {typeof source.score === "number" ? ` · Relevance: ${source.score.toFixed(2)}` : ""}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-      {item.ticket && <CreatedTicket ticket={item.ticket} />}
+      <Speaker role={item.role} gender={gender} />
+      <div className="message-body">
+        {/* Always a text node: replies can contain anything and must never be treated as HTML. */}
+        <p className="bubble">{item.text}</p>
+        {item.sources.length > 0 && (
+          <ul className="sources" aria-label="Sources">
+            {item.sources.map((source) => (
+              <li key={source.document_id}>
+                <span>{source.title}</span> <span className="category">{source.category}</span>
+                <span className="match-details">
+                  KB article {source.document_id}
+                  {source.source ? ` · Source: ${source.source}` : ""}
+                  {typeof source.score === "number" ? ` · Relevance: ${source.score.toFixed(2)}` : ""}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+        {item.ticket && <CreatedTicket ticket={item.ticket} />}
+      </div>
     </li>
   );
 }

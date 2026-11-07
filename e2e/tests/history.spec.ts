@@ -58,3 +58,17 @@ test("one employee never sees another's chats", async ({ page, controls: _contro
   await expect(sidebar(page)).toContainText("Your conversations will appear here.");
   await expect(sidebar(page).getByRole("link")).toHaveCount(0);
 });
+
+test("messages show Tier0's picture and the employee's own icon, not the words You and Tier0", async ({
+  page,
+  controls: _controls,
+}) => {
+  await signIn(page, ALICE);
+  await say(page, VPN);
+  await expect(conversation(page)).toContainText("Here is what our knowledge base says");
+  await expect(conversation(page).getByRole("img", { name: "Tier0" })).toBeVisible();
+  const you = conversation(page).getByRole("img", { name: "You" });
+  await expect(you).toBeVisible();
+  await expect(you.locator("svg")).toHaveAttribute("data-figure", "female"); // Alice's account
+  await expect(conversation(page).getByText("You", { exact: true })).toHaveCount(0);
+});

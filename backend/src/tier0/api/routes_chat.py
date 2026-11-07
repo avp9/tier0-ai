@@ -10,7 +10,14 @@ from uuid import UUID, uuid4
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 
-from tier0.agent.service import AgentService, ChatTurn, ThreadNotFound, TokenEvent
+from tier0.agent.service import (
+    AgentService,
+    ChatTurn,
+    EditNotAllowed,
+    NothingToEdit,
+    ThreadNotFound,
+    TokenEvent,
+)
 from tier0.api.deps import current_user, same_origin
 from tier0.api.schemas import (
     ChatRequest,
@@ -27,6 +34,8 @@ log = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
 NOT_FOUND = "Conversation not found"
+NOTHING_TO_EDIT = "There is no ticket to edit right now."
+ALREADY_SENT = "This ticket has already been sent, so it can no longer be edited."
 
 
 def _agent(request: Request) -> AgentService:
@@ -115,29 +124,42 @@ def send_message(
     thread_id = str(body.thread_id or uuid4())
     bind_thread(thread_id, str(user.id))
     started = time.perf_counter()
+    text = body.message or ""  # empty for a ticket edit, which carries no typed message
     # The requester is always the signed-in employee, never anything from the request body.
     try:
         if _wants_stream(request):
             events = agent.stream(
-                thread_id=thread_id, requester_email=user.email, message=body.message
+                thread_id=thread_id,
+                requester_email=user.email,
+                message=text,
+                ticket_edit=body.ticket_edit,
             )
             return StreamingResponse(
                 _sse(
                     events,
                     user.email,
-                    body.message,
+                    text,
                     started,
-                    lambda: _record(request, thread_id, user.email, body.message),
+                    lambda: _record(request, thread_id, user.email, text),
                 ),
                 media_type="text/event-stream",
                 headers=SSE_HEADERS,
             )
-        turn = agent.send(thread_id=thread_id, requester_email=user.email, message=body.message)
+        turn = agent.send(
+            thread_id=thread_id,
+            requester_email=user.email,
+            message=text,
+            ticket_edit=body.ticket_edit,
+        )
     except ThreadNotFound:
         log.warning("conversation not found or not owned")
         raise HTTPException(status.HTTP_404_NOT_FOUND, NOT_FOUND) from None
-    _log_turn(turn, body.message, started)
-    _record(request, thread_id, user.email, body.message)
+    except NothingToEdit:
+        raise HTTPException(status.HTTP_409_CONFLICT, NOTHING_TO_EDIT) from None
+    except EditNotAllowed:
+        raise HTTPException(status.HTTP_409_CONFLICT, ALREADY_SENT) from None
+    _log_turn(turn, text, started)
+    _record(request, thread_id, user.email, text)
     return to_chat_response(turn, user.email)
 
 

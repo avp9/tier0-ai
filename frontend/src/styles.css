@@ -118,6 +118,7 @@ button:disabled {
 }
 
 input,
+select,
 textarea {
   width: 100%;
   padding: 10px 12px;
@@ -446,19 +447,50 @@ label {
 }
 
 .message {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
   margin-bottom: 16px;
 }
 
 .message.mine {
+  grid-template-columns: minmax(0, 1fr) 36px;
+}
+
+.message-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.message.mine .message-body {
+  grid-column: 1;
+  grid-row: 1;
   align-items: flex-end;
 }
 
-.who {
-  color: var(--muted);
-  font-size: 0.8125rem;
+.message.mine .speaker {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.speaker {
+  display: block;
+  width: 36px;
+  height: 36px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--row-active);
+  object-fit: cover;
+}
+
+.speaker svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .bubble {
@@ -563,6 +595,12 @@ label {
   box-shadow: var(--card-shadow);
 }
 
+/* A tall form (the ticket editor) scrolls inside its own card instead of pushing the chat away. */
+.chat main > .card {
+  max-height: 70dvh;
+  overflow-y: auto;
+}
+
 .card dl {
   display: grid;
   grid-template-columns: max-content 1fr;
@@ -581,6 +619,33 @@ label {
 
 .multiline {
   white-space: pre-wrap;
+}
+
+.edit-form {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.edit-form .edit-requester {
+  margin: 0;
+  color: var(--muted);
+}
+
+.edit-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.edit-form textarea {
+  resize: vertical;
+}
+
+.edit-form .hint {
+  margin: 0;
+  color: var(--error-text);
+  font-size: 0.875rem;
 }
 
 .actions {

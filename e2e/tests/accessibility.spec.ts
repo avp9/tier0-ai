@@ -23,3 +23,15 @@ test("the chat page, including a ticket preview, has no detectable violations", 
   const results = await new AxeBuilder({ page }).withTags(TAGS).analyze();
   expect(results.violations).toEqual([]);
 });
+
+test("the ticket edit form has no detectable violations", async ({
+  page,
+  controls: _controls,
+}) => {
+  await signIn(page);
+  await reachPreview(page);
+  await page.getByRole("region", { name: "Ticket to be created" }).getByRole("button", { name: "Edit" }).click();
+  await expect(page.getByLabel("Title")).toBeFocused();
+  const results = await new AxeBuilder({ page }).withTags(TAGS).analyze();
+  expect(results.violations).toEqual([]);
+});

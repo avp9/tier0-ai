@@ -10,7 +10,7 @@ const INK = "#2b2b2b";
  * mixed up at a glance. They keep their own colours. The neutral one, for an account with no
  * gender set, is a plain grey head and shoulders.
  */
-function Figure({ gender }: { gender: Me["gender"] }) {
+export function Headshot({ gender }: { gender: Me["gender"] }) {
   return (
     <svg
       viewBox="0 0 64 64"
@@ -81,7 +81,7 @@ export function Avatar({ me }: { me: Me }) {
         aria-label={`Signed in as ${me.display_name}`}
         aria-describedby={tooltipId}
       >
-        <Figure gender={me.gender} />
+        <Headshot gender={me.gender} />
         <span className="visually-hidden">{me.display_name}</span>
       </button>
       <span role="tooltip" id={tooltipId} className="avatar-tip">

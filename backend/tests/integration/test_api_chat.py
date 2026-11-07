@@ -16,6 +16,7 @@ from tier0.rag.embeddings import FakeEmbedder
 from tier0.rag.indexer import build_index
 from tier0.rag.loader import load_knowledge_base
 from tier0.rag.retriever import Retriever
+from tier0.tickets.errors import TicketOutcomeUnknown
 
 FIXTURE_DIR = Path(__file__).resolve().parents[3] / "data" / "fixtures"
 SECRET = "s" * 40
@@ -127,6 +128,125 @@ def test_a_failure_while_streaming_ends_with_an_error_event_and_no_details(
     ((name, data),) = parse_sse(response.text)
     assert name == "error" and "secret" not in response.text
     assert data == {"detail": "Something went wrong. Please try again."}
+
+
+# --- editing the ticket before it is sent -----------------------------------------------
+
+EDIT = {
+    "title": "Gym reimbursement question",
+    "description": "Does the company reimburse gym memberships?",
+    "category": "HR",
+    "priority": "Low",
+}
+
+
+def at_the_preview(client: TestClient) -> str:
+    thread = chat(client, GAP).json()["thread_id"]
+    preview = chat(client, "yes", thread).json()["pending_action"]
+    assert preview["type"] == "confirm_ticket" and preview["editable"] is True
+    return cast(str, thread)
+
+
+def edit_ticket(client: TestClient, thread: str | None, ticket_edit: Any = EDIT, **kw: Any) -> Any:
+    body: dict[str, Any] = {"ticket_edit": ticket_edit}
+    if thread:
+        body["thread_id"] = thread
+    return client.post("/api/chat", json=body, **kw)
+
+
+def test_editing_the_preview_shows_the_changes_and_the_ticket_is_created_with_them(
+    alice: TestClient, harness: Harness
+) -> None:
+    thread = at_the_preview(alice)
+    response = edit_ticket(alice, thread)
+    assert response.status_code == 200
+    action = response.json()["pending_action"]
+    assert action["type"] == "confirm_ticket" and action["editable"] is True
+    assert action["preview"]["title"] == EDIT["title"]
+    assert action["preview"]["description"] == EDIT["description"]
+    assert (action["preview"]["category"], action["preview"]["priority"]) == ("HR", "Low")
+    assert harness.adapter.tickets == []  # still only a preview
+
+    done = chat(alice, "yes", thread).json()
+    assert done["ticket"] is not None
+    (stored,) = harness.adapter.tickets
+    assert stored.draft.summary == EDIT["title"] and stored.draft.priority == "Low"
+
+
+def test_the_edited_preview_is_what_a_reload_shows(alice: TestClient) -> None:
+    thread = at_the_preview(alice)
+    edit_ticket(alice, thread)
+    action = alice.get(f"/api/chat/{thread}").json()["pending_action"]
+    assert action["preview"]["title"] == EDIT["title"] and action["editable"] is True
+
+
+def test_a_request_must_carry_a_message_or_an_edit_but_not_both(alice: TestClient) -> None:
+    thread = at_the_preview(alice)
+    both = {"thread_id": thread, "message": "hi", "ticket_edit": EDIT}
+    assert alice.post("/api/chat", json=both).status_code == 422
+    assert alice.post("/api/chat", json={"thread_id": thread}).status_code == 422
+    assert edit_ticket(alice, None).status_code == 422  # an edit needs its conversation
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"title": ""},
+        {"title": "x" * 121},
+        {"description": "   "},
+        {"category": "Finance"},
+        {"priority": "Urgent"},
+        {"extra": "field"},
+    ],
+)
+def test_an_invalid_edit_is_refused_and_changes_nothing(alice: TestClient, change: Any) -> None:
+    thread = at_the_preview(alice)
+    assert edit_ticket(alice, thread, {**EDIT, **change}).status_code == 422
+    action = alice.get(f"/api/chat/{thread}").json()["pending_action"]
+    assert action["preview"]["title"] != EDIT["title"]
+
+
+def test_there_is_nothing_to_edit_unless_a_preview_is_showing(alice: TestClient) -> None:
+    thread = chat(alice, ANSWERABLE).json()["thread_id"]
+    response = edit_ticket(alice, thread)
+    assert response.status_code == 409
+    assert response.json() == {"detail": "There is no ticket to edit right now."}
+
+
+def test_a_ticket_that_may_already_exist_cannot_be_edited(
+    alice: TestClient, harness: Harness
+) -> None:
+    thread = at_the_preview(alice)
+    harness.adapter.fail_next(TicketOutcomeUnknown("no answer"))
+    unknown = chat(alice, "yes", thread).json()["pending_action"]
+    assert unknown["type"] == "confirm_ticket" and unknown["editable"] is False
+    response = edit_ticket(alice, thread)
+    assert response.status_code == 409
+    assert "already been sent" in response.json()["detail"]
+    assert alice.get(f"/api/chat/{thread}").json()["pending_action"]["editable"] is False
+
+
+def test_nobody_can_edit_someone_elses_ticket(app: Any) -> None:
+    with TestClient(app) as alice_client:
+        sign_in(alice_client, ALICE)
+        thread = at_the_preview(alice_client)
+    with TestClient(app) as bob_client:
+        sign_in(bob_client, BOB)
+        response = edit_ticket(bob_client, thread)
+        assert response.status_code == 404 and response.json() == NOT_FOUND
+
+
+def test_an_edit_can_be_streamed_and_is_refused_up_front_when_not_allowed(
+    alice: TestClient,
+) -> None:
+    thread = at_the_preview(alice)
+    streamed = edit_ticket(alice, thread, headers=STREAM)
+    assert streamed.status_code == 200
+    ((name, done),) = parse_sse(streamed.text)
+    assert name == "done" and done["pending_action"]["preview"]["title"] == EDIT["title"]
+    other = chat(alice, ANSWERABLE).json()["thread_id"]
+    refused = edit_ticket(alice, other, headers=STREAM)
+    assert refused.status_code == 409  # a status code, not a stream that fails half way
 
 
 # --- the chat history ----------------------------------------------------------------

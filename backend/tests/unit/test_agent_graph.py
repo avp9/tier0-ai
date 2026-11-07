@@ -1,5 +1,6 @@
 from collections.abc import Callable, Iterator
 from pathlib import Path
+from typing import Any
 
 import pytest
 from agent_harness import (
@@ -9,17 +10,20 @@ from agent_harness import (
     GAP,
     Harness,
 )
+from langgraph.types import Command
 
 from tier0.agent import replies
 from tier0.agent.service import (
     MAX_MESSAGE_CHARS,
     Awaiting,
     ChatTurn,
+    EditNotAllowed,
+    NothingToEdit,
     ThreadOwnershipError,
     TokenEvent,
 )
 from tier0.agent.state import WorkflowStatus
-from tier0.agent.ticket_flow import CANCELLED_REPLY
+from tier0.agent.ticket_flow import CANCELLED_REPLY, EDITED_TEXT
 from tier0.intent.types import Continuity, Domain, Intent, IntentResult
 from tier0.llm.base import LLMError
 from tier0.rag.answering import UNAVAILABLE_REPLY
@@ -27,7 +31,8 @@ from tier0.rag.embeddings import FakeEmbedder
 from tier0.rag.indexer import build_index
 from tier0.rag.loader import load_knowledge_base
 from tier0.rag.retriever import Retriever
-from tier0.tickets.errors import TicketServiceUnavailable
+from tier0.tickets.drafting import TicketEdit
+from tier0.tickets.errors import TicketOutcomeUnknown, TicketServiceUnavailable
 
 FIXTURE_DIR = Path(__file__).resolve().parents[3] / "data" / "fixtures"
 
@@ -135,6 +140,133 @@ def test_a_gap_leads_to_an_offer_then_a_previewed_ticket_then_exactly_one_ticket
     assert done.created_ticket is not None and done.created_ticket.key == "SUP-1"
     assert "SUP-1" in done.reply and len(h.adapter.tickets) == 1
     assert h.adapter.tickets[0].draft.requester_email == ALICE
+
+
+# --- editing the ticket before it is sent ------------------------------------------------
+
+EDIT = TicketEdit(
+    title="Gym reimbursement question",
+    description="I would like to know whether the company reimburses gym memberships.",
+    category="HR",
+    priority="Low",
+)
+
+
+def at_the_preview(h: Harness, thread: str = "t1") -> ChatTurn:
+    h.say(GAP, thread=thread)
+    preview = h.say("yes", thread=thread)
+    assert preview.awaiting is Awaiting.CONFIRM_TICKET and preview.editable
+    return preview
+
+
+def edit(h: Harness, change: TicketEdit = EDIT, thread: str = "t1") -> ChatTurn:
+    return h.agent.send(thread_id=thread, requester_email=ALICE, ticket_edit=change)
+
+
+def test_an_edit_replaces_the_draft_and_the_ticket_is_created_with_the_employees_words(
+    h: Harness,
+) -> None:
+    at_the_preview(h)
+    edited = edit(h)
+    assert edited.awaiting is Awaiting.CONFIRM_TICKET and edited.editable
+    assert edited.pending_ticket is not None
+    assert edited.pending_ticket.summary == "Gym reimbursement question"
+    assert edited.preview is not None and "Gym reimbursement question" in edited.preview
+    assert "Priority: Low" in edited.preview and h.adapter.tickets == []  # nothing sent yet
+
+    done = h.say("yes")
+    assert done.created_ticket is not None and len(h.adapter.tickets) == 1
+    sent = h.adapter.tickets[0].draft
+    assert (sent.summary, sent.description) == (EDIT.title, EDIT.description)
+    assert (sent.category, sent.priority, sent.requester_email) == ("HR", "Low", ALICE)
+
+
+def test_the_conversation_records_that_the_employee_edited_the_ticket(h: Harness) -> None:
+    at_the_preview(h)
+    edit(h)
+    said = [t.content for t in h.agent.history(thread_id="t1", requester_email=ALICE).messages]
+    assert EDITED_TEXT in said
+
+
+def test_an_edit_can_be_followed_by_more_edits_and_still_sends_once(h: Harness) -> None:
+    at_the_preview(h)
+    for n in range(7):  # more than the number of unclear answers that would end the chat
+        edited = edit(h, EDIT.model_copy(update={"title": f"Version {n}"}))
+        assert edited.awaiting is Awaiting.CONFIRM_TICKET
+    done = h.say("yes")
+    assert done.created_ticket is not None and len(h.adapter.tickets) == 1
+    assert h.adapter.tickets[0].draft.summary == "Version 6"
+
+
+def test_an_edit_can_be_cancelled_like_any_other_preview(h: Harness) -> None:
+    at_the_preview(h)
+    edit(h)
+    cancelled = h.say("no")
+    assert cancelled.reply == CANCELLED_REPLY and h.adapter.tickets == []
+
+
+def test_the_requester_cannot_be_changed_by_an_edit(h: Harness) -> None:
+    at_the_preview(h)
+    edit(h)
+    h.say("yes")
+    assert h.adapter.tickets[0].draft.requester_email == ALICE
+
+
+def test_there_is_nothing_to_edit_when_no_preview_is_showing(h: Harness) -> None:
+    h.say(ANSWERABLE)  # a knowledge answer: the agent is not waiting for anything
+    with pytest.raises(NothingToEdit):
+        edit(h)
+    h.say(GAP, thread="offer")  # waiting on the offer, not on a preview
+    with pytest.raises(NothingToEdit):
+        edit(h, thread="offer")
+    assert h.adapter.tickets == []
+
+
+def test_a_ticket_that_may_already_exist_can_no_longer_be_edited(h: Harness) -> None:
+    at_the_preview(h)
+    h.adapter.fail_next(TicketOutcomeUnknown("no answer"))
+    unknown = h.say("yes")
+    assert unknown.awaiting is Awaiting.CONFIRM_TICKET and not unknown.editable
+    with pytest.raises(EditNotAllowed):
+        edit(h)
+    # Replying yes still retries safely, against the same content, so no duplicate is made.
+    retried = h.say("yes")
+    assert retried.created_ticket is not None and len(h.adapter.tickets) == 1
+    assert h.adapter.tickets[0].draft.summary != EDIT.title
+
+
+def test_after_a_ticket_is_created_a_new_one_in_the_same_chat_can_be_edited(h: Harness) -> None:
+    at_the_preview(h)
+    h.say("yes")
+    h.say(GAP)
+    second = h.say("yes")
+    assert second.awaiting is Awaiting.CONFIRM_TICKET and second.editable
+
+
+def test_an_invalid_edit_that_gets_past_the_api_changes_nothing(h: Harness) -> None:
+    at_the_preview(h)
+    # Bypass TicketEdit validation the way a bug elsewhere might: a raw resume value.
+    raw: Command[Any] = Command(
+        resume={"edit": {"title": "", "description": "x", "category": "IT"}}
+    )
+    h.agent._graph.invoke(raw, {"configurable": {"thread_id": "t1"}})
+    view = h.agent.history(thread_id="t1", requester_email=ALICE)
+    assert view.pending is not None and view.pending.awaiting is Awaiting.CONFIRM_TICKET
+    assert view.pending.pending_ticket is not None
+    assert view.pending.pending_ticket.summary != ""
+    assert h.adapter.tickets == []
+
+
+def test_a_streamed_edit_works_and_is_refused_up_front_when_there_is_nothing_to_edit(
+    h: Harness,
+) -> None:
+    at_the_preview(h)
+    events = list(h.agent.stream(thread_id="t1", requester_email=ALICE, ticket_edit=EDIT))
+    turn = events[-1]
+    assert isinstance(turn, ChatTurn) and turn.pending_ticket is not None
+    assert turn.pending_ticket.summary == EDIT.title
+    with pytest.raises(NothingToEdit):
+        h.agent.stream(thread_id="fresh", requester_email=ALICE, ticket_edit=EDIT)
 
 
 def test_declining_the_offer_creates_nothing(h: Harness) -> None:

@@ -15,6 +15,7 @@ from tier0.agent.graph import STREAM_TOKENS, AgentDependencies, build_conversati
 from tier0.agent.state import PendingTicket, WorkflowStatus
 from tier0.intent.types import IntentResult, Turn
 from tier0.rag.answering import Source
+from tier0.tickets.drafting import TicketEdit
 from tier0.tickets.models import CreatedTicket, TicketSummary, validate_email
 
 MAX_MESSAGE_CHARS = 2000
@@ -38,12 +39,21 @@ class ThreadOwnershipError(ThreadNotFound):
     """The conversation belongs to a different employee."""
 
 
+class NothingToEdit(Exception):
+    """The conversation is not showing a ticket preview, so there is nothing to edit."""
+
+
+class EditNotAllowed(Exception):
+    """The ticket was already sent (or may have been), so it can no longer be changed."""
+
+
 class ChatTurn(BaseModel):
     thread_id: str
     reply: str
     awaiting: Awaiting | None = None
     options: list[str] = Field(default_factory=list)
     preview: str | None = None
+    editable: bool = False  # the preview can still be changed (nothing has been sent yet)
     sources: list[Source] = Field(default_factory=list)
     created_ticket: CreatedTicket | None = None
     intent: IntentResult | None = None
@@ -79,10 +89,10 @@ class AgentService:
         return self._locks[hash(thread_id) % LOCK_STRIPES]
 
     @staticmethod
-    def _clean(requester_email: str, message: str) -> tuple[str, str]:
+    def _clean(requester_email: str, message: str, *, needs_text: bool = True) -> tuple[str, str]:
         email = validate_email(requester_email).lower()
         text = message.strip()
-        if not text:
+        if needs_text and not text:
             raise ValueError("message must not be empty")
         if len(text) > MAX_MESSAGE_CHARS:
             raise ValueError(f"message must be at most {MAX_MESSAGE_CHARS} characters")
@@ -96,38 +106,70 @@ class AgentService:
         return snapshot
 
     @staticmethod
-    def _input(snapshot: Any, email: str, text: str) -> Any:
+    def _input(snapshot: Any, email: str, text: str, edit: TicketEdit | None = None) -> Any:
+        if edit is not None:
+            return Command(resume={"edit": edit.model_dump(mode="json")})
         if snapshot.interrupts:  # the agent is waiting for exactly this message
             return Command(resume=text)
         return {"requester_email": email, "user_message": text}
 
-    def send(self, *, thread_id: str, requester_email: str, message: str) -> ChatTurn:
-        email, text = self._clean(requester_email, message)
+    @staticmethod
+    def _check_edit(snapshot: Any) -> None:
+        """An edit is only meaningful at the ticket preview, and only before anything was sent."""
+        waiting = snapshot.interrupts
+        payload = waiting[0].value if waiting else {}
+        if not isinstance(payload, dict) or payload.get("type") != "confirm_ticket":
+            raise NothingToEdit("there is no ticket preview to edit")
+        if not payload.get("editable", False):
+            raise EditNotAllowed("the ticket was already sent and can no longer be edited")
+
+    def send(
+        self,
+        *,
+        thread_id: str,
+        requester_email: str,
+        message: str = "",
+        ticket_edit: TicketEdit | None = None,
+    ) -> ChatTurn:
+        email, text = self._clean(requester_email, message, needs_text=ticket_edit is None)
         config: Any = {"configurable": {"thread_id": thread_id}}
         with self._lock_for(thread_id):
             snapshot = self._check_owner(config, email, thread_id)
-            result = self._graph.invoke(self._input(snapshot, email, text), config)
+            if ticket_edit is not None:
+                self._check_edit(snapshot)
+            result = self._graph.invoke(self._input(snapshot, email, text, ticket_edit), config)
             saved = dict(self._graph.get_state(config).values)
         return self._turn(thread_id, saved, result.get("__interrupt__"))
 
     def stream(
-        self, *, thread_id: str, requester_email: str, message: str
+        self,
+        *,
+        thread_id: str,
+        requester_email: str,
+        message: str = "",
+        ticket_edit: TicketEdit | None = None,
     ) -> Iterator[TokenEvent | ChatTurn]:
         """Like ``send``, but yields the reply text as it is written, then the finished turn.
 
         Problems with the request (empty message, someone else's conversation) are raised here,
         before anything is yielded, so the caller can still answer with an error status.
         """
-        email, text = self._clean(requester_email, message)
-        self._check_owner({"configurable": {"thread_id": thread_id}}, email, thread_id)
-        return self._events(thread_id, email, text)
+        email, text = self._clean(requester_email, message, needs_text=ticket_edit is None)
+        snapshot = self._check_owner({"configurable": {"thread_id": thread_id}}, email, thread_id)
+        if ticket_edit is not None:
+            self._check_edit(snapshot)
+        return self._events(thread_id, email, text, ticket_edit)
 
-    def _events(self, thread_id: str, email: str, text: str) -> Iterator[TokenEvent | ChatTurn]:
+    def _events(
+        self, thread_id: str, email: str, text: str, ticket_edit: TicketEdit | None = None
+    ) -> Iterator[TokenEvent | ChatTurn]:
         config: Any = {"configurable": {"thread_id": thread_id, STREAM_TOKENS: True}}
         with self._lock_for(thread_id):
             snapshot = self._check_owner(config, email, thread_id)
+            if ticket_edit is not None:
+                self._check_edit(snapshot)  # the state may have moved on since the request began
             for chunk in self._graph.stream(
-                self._input(snapshot, email, text), config, stream_mode="custom"
+                self._input(snapshot, email, text, ticket_edit), config, stream_mode="custom"
             ):
                 token = chunk.get("token") if isinstance(chunk, dict) else None
                 if token:
@@ -167,6 +209,7 @@ class AgentService:
                 awaiting=Awaiting(payload["type"]),
                 options=payload.get("options", []),
                 preview=payload.get("preview"),
+                editable=bool(payload.get("editable", False)),
                 **base,
             )
         return ChatTurn(reply=result.get("reply", ""), **base)

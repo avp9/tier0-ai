@@ -1,14 +1,17 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ChatPage } from "./ChatPage";
+import type { Me } from "./types";
 import { ME, chatReply, json, pending, sse, streamedReply, stubApi } from "./test/helpers";
 
 const THREAD = "11111111-1111-4111-8111-111111111111";
 
-function renderChat(props: { onSignOut?: () => void; onSessionExpired?: () => void } = {}) {
+function renderChat(
+  props: { onSignOut?: () => void; onSessionExpired?: () => void; me?: Me } = {},
+) {
   const onSignOut = props.onSignOut ?? vi.fn();
   const onSessionExpired = props.onSessionExpired ?? vi.fn();
-  render(<ChatPage me={ME} onSignOut={onSignOut} onSessionExpired={onSessionExpired} />);
+  render(<ChatPage me={props.me ?? ME} onSignOut={onSignOut} onSessionExpired={onSessionExpired} />);
   return { onSignOut, onSessionExpired, user: userEvent.setup() };
 }
 
@@ -215,7 +218,8 @@ describe("untrusted text", () => {
     const { user } = renderChat();
     await say(user, "hi");
     expect(await screen.findByText(evil)).toBeVisible();
-    expect(conversation().querySelector("img, script, b")).toBeNull();
+    // The only picture is the speaker's own avatar; nothing in the reply became an element.
+    expect(conversation().querySelector("img:not(.speaker), script, b")).toBeNull();
     expect((window as unknown as { pwned?: boolean }).pwned).toBeUndefined();
   });
 
@@ -848,5 +852,272 @@ describe("the chat history", () => {
     renderChat();
     const link = await within(sidebar()).findByRole("link", { name: "<img src=x onerror=alert(1)>" });
     expect(link.querySelector("img")).toBeNull();
+  });
+});
+
+describe("who is speaking", () => {
+  it("shows Tier0's picture for its replies and the employee's own icon for their messages", async () => {
+    stubApi({ "POST /api/chat": () => json(chatReply({ reply: "Here you go." })) });
+    const { user } = renderChat();
+    await say(user, "hello");
+    await within(conversation()).findByText("Here you go.");
+
+    const tier0 = within(conversation()).getByRole("img", { name: "Tier0" });
+    expect(tier0.tagName).toBe("IMG");
+    expect(tier0).toHaveAttribute("src", expect.stringContaining("tier0-avatar"));
+    const you = within(conversation()).getByRole("img", { name: "You" });
+    expect(you.querySelector("svg")).toHaveAttribute("data-figure", "female");
+  });
+
+  it("no longer labels messages with the words You and Tier0", async () => {
+    stubApi({ "POST /api/chat": () => json(chatReply({ reply: "Here you go." })) });
+    const { user } = renderChat();
+    await say(user, "hello");
+    await within(conversation()).findByText("Here you go.");
+    expect(within(conversation()).queryByText("You")).not.toBeInTheDocument();
+    expect(within(conversation()).queryByText("Tier0")).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["male", { ...ME, gender: "male" as const }],
+    ["neutral", { email: ME.email, display_name: ME.display_name }],
+  ])("uses the %s icon for the employee's messages", async (figure, me) => {
+    stubApi({ "POST /api/chat": () => json(chatReply()) });
+    const { user } = renderChat({ me });
+    await say(user, "hello");
+    const you = await within(conversation()).findByRole("img", { name: "You" });
+    expect(you.querySelector("svg")).toHaveAttribute("data-figure", figure);
+  });
+
+  it("gives the half-written answer Tier0's picture too", async () => {
+    const stream = streamedReply();
+    stubApi({ "POST /api/chat": () => stream.response() });
+    const { user } = renderChat();
+    await say(user, "hello");
+    stream.token("Working on it");
+    await within(conversation()).findByText("Working on it");
+    expect(within(conversation()).getByRole("img", { name: "Tier0" })).toBeVisible();
+    stream.done(chatReply({ reply: "Working on it" }));
+  });
+});
+
+describe("editing the ticket before it is sent", () => {
+  const original = {
+    requester_email: "alice@buzztech.example",
+    title: "VPN drops at home",
+    description: "What the employee reported:\n- VPN drops",
+    category: "IT" as const,
+    priority: null,
+  };
+  const edited = {
+    ...original,
+    title: "VPN drops every hour at home",
+    description: "It disconnects hourly.",
+    category: "HR" as const,
+    priority: "High" as const,
+  };
+
+  /** A conversation that has reached the preview; ``respond`` decides what an edit gets back. */
+  async function atThePreview(
+    options: { editable?: boolean; respond?: (body: Record<string, unknown>) => Response } = {},
+  ) {
+    const { editable = true, respond } = options;
+    const api = stubApi({
+      "POST /api/chat": (_u, init) => {
+        const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+        if (body.ticket_edit) {
+          return (
+            respond?.(body) ??
+            json(chatReply({ pending_action: pending({ type: "confirm_ticket", preview: edited, editable }) }))
+          );
+        }
+        if (body.message === "yes") return json(chatReply({ reply: "Created." }));
+        return json(
+          chatReply({
+            reply: "Here is the ticket I'm about to create:",
+            pending_action: pending({ type: "confirm_ticket", preview: original, editable }),
+          }),
+        );
+      },
+    });
+    const view = renderChat();
+    await say(view.user, "raise a ticket: VPN drops");
+    const card = await screen.findByRole("region", { name: "Ticket to be created" });
+    return { ...api, ...view, card };
+  }
+
+  it("offers an Edit button next to Create ticket and Cancel", async () => {
+    const { card } = await atThePreview();
+    expect(within(card).getByRole("button", { name: "Edit" })).toBeEnabled();
+  });
+
+  it("does not offer Edit once the ticket may have been sent", async () => {
+    const { card } = await atThePreview({ editable: false });
+    expect(within(card).getByRole("button", { name: "Create ticket" })).toBeVisible();
+    expect(within(card).queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
+  });
+
+  it("opens a form filled with the current ticket, with the requester shown but not editable", async () => {
+    const { card, user } = await atThePreview();
+    await user.click(within(card).getByRole("button", { name: "Edit" }));
+    expect(within(card).getByLabelText("Title")).toHaveValue("VPN drops at home");
+    expect(within(card).getByLabelText("Title")).toHaveFocus();
+    expect(within(card).getByLabelText("Category")).toHaveValue("IT");
+    expect(within(card).getByLabelText("Priority")).toHaveValue("");
+    expect(within(card).getByLabelText("Description")).toHaveValue(original.description);
+    expect(within(card).getByText("alice@buzztech.example")).toBeVisible();
+    expect(within(card).queryByLabelText("Requester")).not.toBeInTheDocument();
+    // Only the form's own buttons are left, so the ticket cannot be created from half an edit.
+    expect(within(card).queryByRole("button", { name: "Create ticket" })).not.toBeInTheDocument();
+    expect(within(card).queryByRole("button", { name: "Cancel" })).not.toBeInTheDocument();
+  });
+
+  it("limits the lengths to what the server accepts", async () => {
+    const { card, user } = await atThePreview();
+    await user.click(within(card).getByRole("button", { name: "Edit" }));
+    expect(within(card).getByLabelText("Title")).toHaveAttribute("maxlength", "120");
+    expect(within(card).getByLabelText("Description")).toHaveAttribute("maxlength", "4000");
+  });
+
+  it("sends every field as an edit of this conversation, then shows the updated ticket", async () => {
+    const { card, user, sentMessages } = await atThePreview();
+    await user.click(within(card).getByRole("button", { name: "Edit" }));
+    const title = within(card).getByLabelText("Title");
+    await user.clear(title);
+    await user.type(title, "  VPN drops every hour at home ");
+    await user.selectOptions(within(card).getByLabelText("Category"), "HR");
+    await user.selectOptions(within(card).getByLabelText("Priority"), "High");
+    const description = within(card).getByLabelText("Description");
+    await user.clear(description);
+    await user.type(description, "It disconnects hourly.");
+    await user.click(within(card).getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() => expect(sentMessages()).toHaveLength(2));
+    const body = sentMessages()[1]?.body as Record<string, unknown>;
+    expect(body).toEqual({
+      thread_id: "11111111-1111-4111-8111-111111111111",
+      ticket_edit: {
+        title: "VPN drops every hour at home",
+        description: "It disconnects hourly.",
+        category: "HR",
+        priority: "High",
+      },
+    });
+    expect(body).not.toHaveProperty("message");
+
+    const updated = await screen.findByRole("region", { name: "Ticket to be created" });
+    expect(within(updated).getByText("VPN drops every hour at home")).toBeVisible();
+    expect(within(updated).queryByLabelText("Title")).not.toBeInTheDocument(); // back to the summary
+    expect(within(updated).getByRole("button", { name: "Create ticket" })).toBeEnabled();
+    expect(within(conversation()).getByText("I edited the ticket.")).toBeVisible();
+    expect(screen.queryByRole("group", { name: "Created ticket" })).not.toBeInTheDocument();
+  });
+
+  it("sends Not set as no priority", async () => {
+    const { card, user, sentMessages } = await atThePreview();
+    await user.click(within(card).getByRole("button", { name: "Edit" }));
+    await user.selectOptions(within(card).getByLabelText("Priority"), "Low");
+    await user.selectOptions(within(card).getByLabelText("Priority"), "Not set");
+    await user.type(within(card).getByLabelText("Title"), "!");
+    await user.click(within(card).getByRole("button", { name: "Save changes" }));
+    await waitFor(() => expect(sentMessages()).toHaveLength(2));
+    expect((sentMessages()[1]?.body as { ticket_edit: { priority: unknown } }).ticket_edit.priority).toBeNull();
+  });
+
+  it("only lets the employee save once something has changed", async () => {
+    const { card, user } = await atThePreview();
+    await user.click(within(card).getByRole("button", { name: "Edit" }));
+    expect(within(card).getByRole("button", { name: "Save changes" })).toBeDisabled();
+    await user.type(within(card).getByLabelText("Title"), " again");
+    expect(within(card).getByRole("button", { name: "Save changes" })).toBeEnabled();
+  });
+
+  it.each(["Title", "Description"])("will not save with an empty %s", async (field) => {
+    const { card, user, sentMessages } = await atThePreview();
+    await user.click(within(card).getByRole("button", { name: "Edit" }));
+    await user.clear(within(card).getByLabelText(field));
+    expect(within(card).getByRole("button", { name: "Save changes" })).toBeDisabled();
+    expect(within(card).getByText("The title and the description cannot be empty.")).toBeVisible();
+    await user.type(within(card).getByLabelText(field), "   ");
+    expect(within(card).getByRole("button", { name: "Save changes" })).toBeDisabled();
+    expect(sentMessages()).toHaveLength(1);
+  });
+
+  it("discards the changes without sending anything", async () => {
+    const { card, user, sentMessages } = await atThePreview();
+    await user.click(within(card).getByRole("button", { name: "Edit" }));
+    await user.type(within(card).getByLabelText("Title"), " changed");
+    await user.click(within(card).getByRole("button", { name: "Discard changes" }));
+    expect(within(card).getByText("VPN drops at home")).toBeVisible();
+    expect(within(card).queryByLabelText("Title")).not.toBeInTheDocument();
+    expect(sentMessages()).toHaveLength(1);
+  });
+
+  it("creates the ticket from the edited preview", async () => {
+    const { card, user, sentMessages } = await atThePreview();
+    await user.click(within(card).getByRole("button", { name: "Edit" }));
+    await user.type(within(card).getByLabelText("Title"), " (urgent)");
+    await user.click(within(card).getByRole("button", { name: "Save changes" }));
+    const updated = await screen.findByText("VPN drops every hour at home");
+    expect(updated).toBeVisible();
+    await user.click(within(screen.getByRole("region", { name: "Ticket to be created" })).getByRole("button", { name: "Create ticket" }));
+    await waitFor(() => expect(sentMessages()).toHaveLength(3));
+    expect(sentMessages()[2]?.body).toMatchObject({ message: "yes" });
+  });
+
+  it("keeps the form and what was typed when saving fails", async () => {
+    const { card, user } = await atThePreview({
+      respond: () => json({ detail: "boom" }, 500),
+    });
+    await user.click(within(card).getByRole("button", { name: "Edit" }));
+    await user.type(within(card).getByLabelText("Title"), " more");
+    await user.click(within(card).getByRole("button", { name: "Save changes" }));
+    expect(await screen.findByRole("alert")).toBeVisible();
+    expect(within(card).getByLabelText("Title")).toHaveValue("VPN drops at home more");
+    expect(within(conversation()).queryByText("I edited the ticket.")).not.toBeInTheDocument();
+  });
+
+  it("explains, and shows the truth, when the ticket can no longer be edited", async () => {
+    let edits = 0;
+    stubApi({
+      "POST /api/chat": (_u, init) => {
+        const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+        if (body.ticket_edit) {
+          edits += 1;
+          return json({ detail: "This ticket has already been sent, so it can no longer be edited." }, 409);
+        }
+        return json(
+          chatReply({ pending_action: pending({ type: "confirm_ticket", preview: original, editable: true }) }),
+        );
+      },
+      [`GET /api/chat/${THREAD}`]: () =>
+        json({
+          thread_id: THREAD,
+          messages: [{ role: "assistant", content: "It may already exist." }],
+          pending_action: pending({ type: "confirm_ticket", preview: original, editable: false }),
+        }),
+    });
+    const { user } = renderChat();
+    await say(user, "raise a ticket");
+    const card = await screen.findByRole("region", { name: "Ticket to be created" });
+    await user.click(within(card).getByRole("button", { name: "Edit" }));
+    await user.type(within(card).getByLabelText("Title"), "x");
+    await user.click(within(card).getByRole("button", { name: "Save changes" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("already been sent");
+    await waitFor(() => expect(edits).toBe(1));
+    const refreshed = await screen.findByRole("region", { name: "Ticket to be created" });
+    await waitFor(() => expect(within(refreshed).queryByRole("button", { name: "Edit" })).not.toBeInTheDocument());
+  });
+
+  it("shows what the employee wrote as text, never as markup", async () => {
+    const hostile = { ...edited, title: "<img src=x onerror=alert(1)>", description: "<b>bold</b>" };
+    const { card, user } = await atThePreview({
+      respond: () => json(chatReply({ pending_action: pending({ type: "confirm_ticket", preview: hostile, editable: true }) })),
+    });
+    await user.click(within(card).getByRole("button", { name: "Edit" }));
+    await user.type(within(card).getByLabelText("Title"), "x");
+    await user.click(within(card).getByRole("button", { name: "Save changes" }));
+    const updated = await screen.findByText("<img src=x onerror=alert(1)>");
+    expect(updated.closest("section")?.querySelector("img, b")).toBeNull();
   });
 });

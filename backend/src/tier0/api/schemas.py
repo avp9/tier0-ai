@@ -3,11 +3,12 @@ from __future__ import annotations
 from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field, StringConstraints
+from pydantic import BaseModel, Field, StringConstraints, model_validator
 
 from tier0.agent.service import MAX_MESSAGE_CHARS, Awaiting, ChatTurn, ThreadView
 from tier0.intent.types import Intent, Turn
 from tier0.rag.answering import Source
+from tier0.tickets.drafting import TicketEdit
 
 IntentName = Literal[
     "knowledge", "create_ticket", "ticket_status", "smalltalk", "out_of_scope", "ambiguous"
@@ -23,10 +24,25 @@ INTENT_NAMES: dict[Intent, IntentName] = {
 
 
 class ChatRequest(BaseModel):
+    """One employee turn: a typed message, or edits to the ticket preview, never both."""
+
     thread_id: UUID | None = None
-    message: Annotated[
-        str, StringConstraints(strip_whitespace=True, min_length=1, max_length=MAX_MESSAGE_CHARS)
-    ]
+    message: (
+        Annotated[
+            str,
+            StringConstraints(strip_whitespace=True, min_length=1, max_length=MAX_MESSAGE_CHARS),
+        ]
+        | None
+    ) = None
+    ticket_edit: TicketEdit | None = None
+
+    @model_validator(mode="after")
+    def _one_or_the_other(self) -> ChatRequest:
+        if (self.message is None) == (self.ticket_edit is None):
+            raise ValueError("send either a message or a ticket_edit")
+        if self.ticket_edit is not None and self.thread_id is None:
+            raise ValueError("a ticket_edit needs the thread_id of the conversation it belongs to")
+        return self
 
 
 class TicketPreview(BaseModel):
@@ -49,6 +65,7 @@ class PendingAction(BaseModel):
     type: Literal["offer_ticket", "collect_ticket_details", "confirm_ticket", "select_ticket"]
     prompt: str
     preview: TicketPreview | None = None
+    editable: bool = False  # the preview can still be edited (nothing has been sent yet)
     options: list[TicketOption] = Field(default_factory=list)
 
 
@@ -86,6 +103,7 @@ def _pending_action(turn: ChatTurn, requester_email: str) -> PendingAction | Non
             category=ticket.category,
             priority=ticket.priority,
         )
+        action.editable = turn.editable
     if turn.awaiting is Awaiting.SELECT_TICKET:
         action.options = [
             TicketOption(ticket_key=t.key, title=t.title, status=t.status)
