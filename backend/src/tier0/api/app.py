@@ -12,7 +12,12 @@ from fastapi.responses import JSONResponse
 from psycopg_pool import ConnectionPool
 
 from tier0.agent.checkpoint import make_pool
-from tier0.agent.factory import BuiltAgent, ChatNotConfigured, build_agent_from_settings
+from tier0.agent.factory import (
+    BuiltAgent,
+    ChatNotConfigured,
+    build_agent_from_settings,
+    score_threshold,
+)
 from tier0.agent.service import AgentService
 from tier0.api.limits import BodyLimitMiddleware
 from tier0.api.routes_auth import router as auth_router
@@ -101,7 +106,7 @@ def create_app(
                             Path(settings.evaluation_dir)
                             if settings.evaluation_dir
                             else REPO_EVALUATION_DIR,
-                            current_threshold=settings.retrieval_score_threshold,
+                            current_threshold=score_threshold(settings, built.retriever),
                             embedding_model=settings.embedding_model,
                         )
                     checks["knowledge_index"] = built.index_check

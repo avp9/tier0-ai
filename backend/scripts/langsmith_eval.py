@@ -64,6 +64,7 @@ def settings_for(args: argparse.Namespace) -> Settings:
         app_env="local",
         ticketing_provider="fake",
         llm_provider="fake" if args.providers == "fake" else "openai",
+        search_mode=args.search_mode,
         vector_store_path=str(args.index_dir),
         langsmith_tracing=False,  # experiments are traced by LangSmith itself, not the app's tracer
     )
@@ -88,7 +89,8 @@ def experiment_metadata(settings: Settings) -> dict[str, Any]:
         "llm_provider": settings.llm_provider,
         "llm_model": settings.openai_model_name if settings.llm_provider == "openai" else "fake",
         "retrieval_top_k": settings.retrieval_top_k,
-        "retrieval_score_threshold": settings.retrieval_score_threshold,
+        "search_mode": settings.search_mode,
+        "score_threshold": settings.effective_score_threshold,
         "git_commit": git_commit(),
     }
 
@@ -160,6 +162,12 @@ def main() -> int:
         description=__doc__, formatter_class=argparse.RawTextHelpFormatter
     )
     parser.add_argument("--providers", choices=["real", "fake"], default="real")
+    parser.add_argument(
+        "--search-mode",
+        choices=["dense", "hybrid_rerank"],
+        default="dense",
+        help="dense: embeddings alone (today's search). hybrid_rerank: plus SPLADE and a reranker",
+    )
     parser.add_argument("--index-dir", type=Path, default=REPO_ROOT / ".data" / "chroma")
     parser.add_argument("--limit", type=int, default=None, help="only the first N cases")
     commands = parser.add_subparsers(dest="command", required=True)

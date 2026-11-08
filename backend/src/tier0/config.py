@@ -66,6 +66,15 @@ class Settings(BaseSettings):
     vector_store_path: str = ".data/chroma"
     retrieval_top_k: int = Field(default=5, ge=1, le=20)
     retrieval_score_threshold: float = Field(default=0.30, ge=0.0, le=1.0)
+    # "dense": the embedding search alone. "hybrid_rerank": also a keyword (SPLADE) search, and a
+    # reranker that re-reads the best candidates. Needs the keyword index (build_index.py) and the
+    # two small models; if either is missing the app logs a warning and uses "dense".
+    search_mode: Literal["dense", "hybrid_rerank"] = "dense"
+    # The same "is this good enough to answer?" bar for hybrid_rerank, on the reranker's own 0 to 1
+    # scale (0.12 kept every answerable question and rejected 88% of the gap ones in the check set).
+    rerank_score_threshold: float = Field(default=0.12, ge=0.0, le=1.0)
+    # Where the models are stored; empty uses fastembed's default. The image bakes them in.
+    model_cache_dir: str = ""
     # Semantic cache for answers (Redis with the search module, e.g. Redis 8 or Redis Stack).
     # Empty means no cache. A question whose embedding is at least this similar to an answered
     # one gets the stored answer, until it expires.
@@ -128,6 +137,13 @@ class Settings(BaseSettings):
     def cookie_secure(self) -> bool:
         """Browsers only send Secure cookies over HTTPS; local development uses plain HTTP."""
         return not self.is_local
+
+    @property
+    def effective_score_threshold(self) -> float:
+        """The bar to answer at, which depends on whose scores are being compared."""
+        if self.search_mode == "hybrid_rerank":
+            return self.rerank_score_threshold
+        return self.retrieval_score_threshold
 
     def missing_chat_settings(self) -> list[str]:
         """Environment variables that chat needs but that are not set."""
