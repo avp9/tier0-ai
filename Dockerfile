@@ -79,3 +79,19 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=20s --retries=3 \
   CMD python -c "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/api/health', timeout=2)"
 CMD ["uvicorn", "--factory", "tier0.api.app:create_app_from_env", "--host", "0.0.0.0", "--port", "8000"]
+
+# The whole app on one machine (scripts/run-local.sh): the search models and the tools to build
+# the index are inside, the index itself lives in a volume (so it is built or copied once).
+FROM runtime AS local
+COPY --from=models --chown=tier0 /opt/models /opt/models
+COPY backend/scripts /app/scripts
+COPY data/knowledge_base /app/data/knowledge_base
+COPY data/evaluation /app/data/evaluation
+ENV SEARCH_MODE=hybrid_rerank MODEL_CACHE_DIR=/opt/models HF_HUB_OFFLINE=1 \
+    EVALUATION_DIR=/app/data/evaluation
+RUN mkdir -p /app/data/chroma && chown -R tier0 /app/data
+USER tier0
+EXPOSE 8000
+HEALTHCHECK --interval=10s --timeout=3s --start-period=60s --retries=12 \
+  CMD python -c "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/api/health', timeout=2)"
+CMD ["uvicorn", "--factory", "tier0.api.app:create_app_from_env", "--host", "0.0.0.0", "--port", "8000"]

@@ -1,0 +1,26 @@
+# Files left out of the code archive and of the copy sent to the Azure VM (one pattern per line,
+# matched as path prefixes or file names). Used by scripts/package.sh and scripts/deploy-azure.sh.
+.git/
+.github/
+.env
+.run/
+.venv/
+node_modules/
+__pycache__/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+frontend/dist/
+e2e/test-results/
+e2e/playwright-report/
+e2e/node_modules/
+.claude/
+.DS_Store
+.docker-compose.yml.swp
+*.swp
+dist/
+ss.png
+OP.png
+project.txt
+qa_dataset.json
+SmartDesk_AI_Complete_Specification.md

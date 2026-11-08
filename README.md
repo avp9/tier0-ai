@@ -15,6 +15,18 @@ An IT and HR help-desk agent for the fictional company BuzzTech Solutions. An em
 
 The screenshots and recording in [docs/demo](docs/demo/) come from the fake-provider stack: the "answers" are a stand-in model quoting the knowledge base, so they show the product's behaviour, not real answer quality.
 
+## Run the whole app with one command (real models)
+
+Needs Docker and an OpenAI API key. See [RUN.md](RUN.md) for the short version.
+
+| Goal | Command |
+|---|---|
+| On this Mac (or any Linux machine): web app, API, PostgreSQL, Redis in containers | `scripts/run-local.sh` (`logs`, `status`, `down`, `reset`; `--port N`) |
+| On an Azure VM it creates for you (firewalled to your address; `destroy` removes it) | `scripts/deploy-azure.sh` (`update`, `status`, `logs`, `ssh`, `destroy`; `--dry-run`) |
+| Make the zip to hand in (code, docs and the prebuilt search index; never your keys) | `scripts/package.sh` (`--no-index` for a smaller zip) |
+
+The first run asks for the OpenAI key (required) and the Typesafe, Jira and LangSmith keys (optional), saving them only in `.env`; then it builds the image, copies in the prebuilt index (or builds it: 15 to 40 minutes), and prints the address and sign-in. Without Jira settings in `.env`, tickets go to an in-memory stand-in.
+
 ## Try it in two minutes (no API keys)
 
 You need Docker. This starts the real app and PostgreSQL with fake language models and a fake ticket system, serving the web app on <http://localhost:8000>:

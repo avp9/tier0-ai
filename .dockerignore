@@ -18,3 +18,4 @@ qa_dataset.json
 OP.png
 *.md
 !README.md
+.run
