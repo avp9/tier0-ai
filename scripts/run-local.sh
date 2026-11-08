@@ -7,7 +7,8 @@
 #   scripts/run-local.sh down       stop it (data is kept)
 #   scripts/run-local.sh reset      stop it and delete all its data (database, index, secrets)
 #
-# Options for start:  --port N  --bind ADDRESS  --yes (no questions)  --random-demo-passwords
+# Options for start:  --port N  --bind ADDRESS  --yes (no questions; also agrees to replace an
+#   unreadable database left by a run in another folder)  --random-demo-passwords
 #
 # Needs: Docker (Docker Desktop on a Mac). Keys come from .env; any that are missing it asks for
 # (typing is hidden) and saves them in .env only: OPENAI_API_KEY (required), TYPESAFE_API_KEY,
@@ -29,7 +30,7 @@ while [[ $# -gt 0 ]]; do
     --bind) BIND="$2"; shift ;;
     --yes|-y) ASSUME_YES=1 ;;
     --random-demo-passwords) RANDOM_PASSWORDS=1 ;;
-    -h|--help) sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n '2,/^set -euo/{/^set -euo/!p;}' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "Unknown option: $1 (try --help)" >&2; exit 2 ;;
   esac
   shift
@@ -116,7 +117,9 @@ ensure_dotenv_key() {
 # Secrets this script makes up (kept in .run/, never in .env, never in git).
 load_generated() {
   mkdir -p "$RUN_DIR"; chmod 700 "$RUN_DIR"
-  local f="$RUN_DIR/secrets.env"; touch "$f"; chmod 600 "$f"
+  local f="$RUN_DIR/secrets.env"
+  FRESH_SECRETS=0; [[ -s "$f" ]] || FRESH_SECRETS=1  # first run in this folder
+  touch "$f"; chmod 600 "$f"
   add_secret() { grep -q "^$1=" "$f" || printf '%s=%s\n' "$1" "$2" >> "$f"; }
   add_secret TIER0_DB_PASSWORD "$(random_text 32)"
   add_secret GENERATED_SESSION_SECRET "$(random_text 64)"
@@ -198,6 +201,14 @@ cmd_up() {
   write_env_files
   if port_in_use "$PORT" && [[ -z "$(dc ps -q app 2>/dev/null)" ]]; then
     die "Port $PORT is already in use. Choose another: scripts/run-local.sh --port 8001"
+  fi
+  if [[ "$FRESH_SECRETS" == 1 ]] && docker volume inspect tier0_pgdata >/dev/null 2>&1; then
+    # A database from a run in another folder: its password is not here, so it cannot be opened.
+    say "A Tier0 database from an earlier run exists, but this folder does not have its password."
+    ask "Delete that old database (demo users and chats only) and start fresh?" \
+      || die "Stopped. Run it from the folder you used before, or agree to replace the database."
+    dc down >/dev/null 2>&1 || true
+    docker volume rm tier0_pgdata >/dev/null
   fi
   say "Building the app (the first time takes several minutes: it downloads the two search models)..."
   dc build app
