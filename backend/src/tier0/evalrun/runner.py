@@ -54,6 +54,8 @@ class KnowledgeOutcome:
     routed_correctly: bool
     seconds: float
     sources: list[str]
+    reply: str = ""
+    escalated: bool = False  # the agent offered to raise a ticket
 
 
 @dataclass
@@ -64,6 +66,7 @@ class GapOutcome:
     answered: bool
     routed_correctly: bool
     seconds: float
+    reply: str = ""
 
 
 class Evaluator:
@@ -93,6 +96,8 @@ class Evaluator:
             routed_correctly=bool(turn.intent and turn.intent.intent is Intent.KNOWLEDGE_QUESTION),
             seconds=seen.seconds,
             sources=sources,
+            reply=turn.reply,
+            escalated=turn.awaiting is Awaiting.OFFER_TICKET,
         )
 
     def run_gap(self, case: GapCase) -> GapOutcome:
@@ -105,6 +110,7 @@ class Evaluator:
             answered=turn.awaiting is None and bool(turn.sources),
             routed_correctly=bool(turn.intent and turn.intent.intent is Intent.KNOWLEDGE_QUESTION),
             seconds=seen.seconds,
+            reply=turn.reply,
         )
 
     # --- scripted conversations -------------------------------------------------------

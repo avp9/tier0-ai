@@ -7,16 +7,23 @@ Four datasets, built from the files in ``data/evaluation`` (the same cases ``run
   tier0-knowledge      does the agent answer, citing a correct article?
   tier0-gaps           does the agent decline questions the knowledge base cannot answer?
   tier0-conversations  do scripted conversations (routing, tickets, status, safety) behave?
+  tier0-qa             question and reference answer pairs (data/evaluation/qa_dataset.jsonl):
+                       is the answer correct, does it state the key facts, is the source right,
+                       and are unanswerable questions declined?
 """
 
 from __future__ import annotations
 
+import json
+import re
 import uuid
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
 from tier0.evalrun.cases import ConversationCase, GapCase, KnowledgeCase
+from tier0.evalrun.qa_dataset import QAExample
+from tier0.llm.base import ChatModel
 from tier0.rag.evaluation import (
     RetrievalCase,
     hit_at_k,
@@ -29,12 +36,14 @@ DATASETS = {
     "knowledge": "tier0-knowledge",
     "gaps": "tier0-gaps",
     "conversations": "tier0-conversations",
+    "qa": "tier0-qa",
 }
 DESCRIPTIONS = {
     "retrieval": "Questions and the knowledge-base articles that answer them (search only).",
     "knowledge": "Questions the knowledge base should answer, citing one of the listed articles.",
     "gaps": "Questions about topics deliberately missing: the agent must offer a ticket.",
     "conversations": "Scripted conversations and what must be true afterwards.",
+    "qa": "Questions with a reference answer, key facts and sources (or: must be declined).",
 }
 RETRIEVAL_KS = (1, 3, 5)
 
@@ -105,6 +114,28 @@ def conversation_examples(cases: Sequence[ConversationCase]) -> list[ExampleSpec
             {"case_id": c.id, "kind": c.kind},
         )
         for c in cases
+    ]
+
+
+def qa_examples(examples: Sequence[QAExample]) -> list[ExampleSpec]:
+    return [
+        ExampleSpec(
+            e.id,
+            {"id": e.id, "question": e.question},
+            {
+                "reference_answer": e.reference_answer,
+                "key_facts": e.key_facts,
+                "relevant_ids": e.relevant_ids,
+                "should_answer": e.should_answer,
+            },
+            {
+                "case_id": e.id,
+                "source_kind": e.source_kind,
+                "question_type": e.question_type,
+                "category": e.category,
+            },
+        )
+        for e in examples
     ]
 
 
@@ -217,6 +248,23 @@ def gap_target(driver: Driver) -> Target:
     return run
 
 
+def qa_target(driver: Driver) -> Target:
+    def run(inputs: dict[str, Any]) -> dict[str, Any]:
+        outcome = driver.run_knowledge(
+            KnowledgeCase(id=inputs["id"], question=inputs["question"], relevant_ids=())
+        )
+        return {
+            "question": inputs["question"],
+            "reply": outcome.reply,
+            "answered": outcome.answered,
+            "escalated": outcome.escalated,
+            "cited_ids": list(outcome.sources),
+            "seconds": round(outcome.seconds, 2),
+        }
+
+    return run
+
+
 def conversation_target(driver: Driver) -> Target:
     def run(inputs: dict[str, Any]) -> dict[str, Any]:
         outcome = driver.run_case(ConversationCase.model_validate(inputs["case"]))
@@ -293,7 +341,79 @@ def passed(outputs: dict[str, Any], reference_outputs: dict[str, Any]) -> dict[s
     return _score("passed", outputs["passed"], "; ".join(outputs["failures"]) or None)
 
 
-def evaluators_for(key: str) -> list[Evaluation]:
+JUDGE_SYSTEM = (
+    "You grade a help-desk assistant's REPLY against a trusted REFERENCE answer for one QUESTION. "
+    "Judge only what the reply says, not how it is written. For each KEY FACT say whether the "
+    "reply states it (the same meaning in other words counts). Say whether the reply "
+    "CONTRADICTS the reference or states a company-specific fact the reference does not support.\n"
+    'Reply with JSON only: {"covered": [true or false, one per key fact, in order], '
+    '"contradicts": true or false, "reason": "<one sentence>"}.'
+)
+
+
+def judge_reply(
+    judge: ChatModel, question: str, reply: str, reference: str, facts: Sequence[str]
+) -> tuple[float, bool, str]:
+    """(share of key facts the reply states, whether it contradicts the reference, why)."""
+    numbered = "\n".join(f"{i + 1}. {fact}" for i, fact in enumerate(facts))
+    prompt = (
+        f"QUESTION: {question}\n\nREFERENCE ANSWER: {reference}\n\nKEY FACTS:\n{numbered}\n\n"
+        f"REPLY TO GRADE:\n{reply}"
+    )
+    raw = judge.complete(JUDGE_SYSTEM, prompt, json_mode=True)
+    match = re.search(r"\{.*\}", raw, flags=re.DOTALL)
+    try:
+        data = json.loads(match.group()) if match else {}
+        covered = [bool(c) for c in data.get("covered", [])][: len(facts)]
+        contradicts = bool(data.get("contradicts", False))
+        reason = str(data.get("reason", ""))
+    except (ValueError, TypeError):
+        return 0.0, False, "the judge's reply could not be read"
+    covered += [False] * (len(facts) - len(covered))
+    return (sum(covered) / len(facts) if facts else 1.0), contradicts, reason
+
+
+def qa_correctness(judge: ChatModel) -> Evaluation:
+    """Grades answerable questions with a model; does not apply to ones that must be declined."""
+
+    def correctness(outputs: dict[str, Any], reference_outputs: dict[str, Any]) -> dict[str, Any]:
+        if not reference_outputs["should_answer"]:
+            return {"results": []}
+        coverage, contradicts, reason = judge_reply(
+            judge,
+            outputs.get("question", ""),
+            outputs["reply"],
+            reference_outputs["reference_answer"],
+            reference_outputs["key_facts"],
+        )
+        return {
+            "results": [
+                _score("key_fact_coverage", coverage, reason),
+                _score("correct", coverage == 1.0 and not contradicts, reason),
+            ]
+        }
+
+    return correctness
+
+
+def qa_behaviour(outputs: dict[str, Any], reference_outputs: dict[str, Any]) -> dict[str, Any]:
+    """Answered what it should, and declined (offered a ticket) what it should."""
+    if reference_outputs["should_answer"]:
+        ok = bool(outputs["answered"])
+        comment = None if ok else "did not answer a question the knowledge base covers"
+        return _score("behaved_correctly", ok, comment)
+    ok = bool(outputs["escalated"]) and not outputs["answered"]
+    return _score("behaved_correctly", ok, None if ok else "answered, or no ticket offered")
+
+
+def qa_source(outputs: dict[str, Any], reference_outputs: dict[str, Any]) -> dict[str, Any]:
+    if not reference_outputs["should_answer"]:
+        return {"results": []}
+    relevant = set(reference_outputs["relevant_ids"])
+    return _score("cited_correct_article", any(i in relevant for i in outputs["cited_ids"]))
+
+
+def evaluators_for(key: str, judge: ChatModel | None = None) -> list[Evaluation]:
     table: dict[str, list[Evaluation]] = {
         "retrieval": [
             *(hit_evaluator(k) for k in RETRIEVAL_KS),
@@ -303,5 +423,6 @@ def evaluators_for(key: str) -> list[Evaluation]:
         "knowledge": [answered, cited_a_correct_article, routed_as_a_question],
         "gaps": [declined_correctly, routed_as_a_question],
         "conversations": [passed],
+        "qa": [qa_behaviour, qa_source, *([qa_correctness(judge)] if judge else [])],
     }
     return table[key]
