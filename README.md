@@ -6,14 +6,22 @@ An IT and HR help-desk agent for the fictional company BuzzTech Solutions. An em
 
 ## Start here (for a grader)
 
-| | |
+Everything needed to assess the project is linked from this page.
+
+| To see | Go to |
 |---|---|
-| **Run it** | [RUN.md](RUN.md): unzip, `./scripts/run-local.sh`, sign in. Needs Docker and an OpenAI key |
-| **Which requirement is met where, and how it is proven** | [Requirements map](docs/requirements-map.md): every FR, AT test, rubric category and bonus |
-| **Measured quality** | [Evaluation report](docs/evaluation-report.md) |
-| **Architecture diagrams** | [Interactive architecture diagram](docs/architecture-diagram.html) (open in a browser: dark/light, hover for source links) and the Mermaid diagrams in [Architecture](docs/architecture.md) |
-| **Where this departs from the specification, and why** | [Design decisions](docs/design-decisions.md) (including the chunking strategy) |
-| **Demo** | [Demo script](docs/demo-script.md), screenshots and a recording in [docs/demo](docs/demo/) |
+| **Run it** (one command, needs Docker and an OpenAI key) | [RUN.md](RUN.md): `./scripts/run-local.sh`, then sign in. Setup details and every setting: [Run it from source](#run-it-from-source), [Configuration](#configuration) |
+| **Architecture diagram** | **[Interactive diagram](docs/architecture-diagram.html)** (open the file in a browser: dark/light themes, a source link on every component; [view it online](https://htmlpreview.github.io/?https://github.com/avp9/tier0-ai/blob/main/docs/architecture-diagram.html)), shown below. More diagrams (system, conversation graph, ticket flow, delivery): [docs/architecture.md](docs/architecture.md) |
+| **Which requirement is met where, and how it is proven** | [Requirements map](docs/requirements-map.md): every requirement, acceptance test AT-01 to AT-19, rubric category and bonus |
+| **Measured quality** (real models) | [Evaluation report](docs/evaluation-report.md), raw outputs in [docs/evaluation-runs](docs/evaluation-runs/); search comparison and sample queries in [Hybrid search](docs/hybrid-search.md); tracing and datasets in [LangSmith](docs/langsmith.md) |
+| **Demo** (RAG answer, knowledge gap, ticket creation, ticket status, search quality) | [Demo script](docs/demo-script.md), ten screenshots and a recording of the ticket flow in [docs/demo](docs/demo/) |
+| **Knowledge base files** and how to rebuild the index | [data/knowledge_base](data/knowledge_base/) (sources and licences in [SOURCES.md](data/knowledge_base/SOURCES.md)); `backend/scripts/build_index.py` ([Run it with real providers](#run-it-with-real-providers)) |
+| **Evaluation datasets** | [data/evaluation](data/evaluation/): 44 retrieval questions, 42 knowledge-gap questions, 25 scripted conversations, 191 reference answers |
+| **Where this departs from the specification, why, and what is not built** | [Design decisions](docs/design-decisions.md) (including the chunking strategy and the known limits) |
+| **Tests** | [Tests and checks](#tests-and-checks): 1,113 backend, 229 frontend and 79 browser tests; [failure and adversarial testing](docs/failure-and-adversarial-testing.md) |
+| **Change history** | [CHANGELOG.md](CHANGELOG.md) |
+
+![Tier0 AI architecture: how a question becomes an answer or a ticket](docs/architecture-diagram.png)
 
 ## What is and is not proven
 
