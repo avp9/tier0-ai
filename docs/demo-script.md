@@ -28,7 +28,7 @@ The agent does not guess; it offers a ticket. Click **Yes, raise a ticket**.
 
 ![The ticket preview](demo/04-ticket-preview.png)
 
-It drafts the ticket from the conversation and shows exactly what will be sent. **Nothing exists yet.** Optional: type `hmm maybe` instead of clicking. The agent asks for a clear answer and still creates nothing. Then click **Create ticket**.
+It drafts the ticket from the conversation and shows exactly what will be sent. **Nothing exists yet.** Optional: type `hmm maybe` instead of clicking. The agent asks for a clear answer and still creates nothing. The preview also has an **Edit** button to change the title, description, category or priority before anything is sent. Then click **Create ticket**.
 
 ![The created ticket](demo/05-ticket-created.png)
 
@@ -57,6 +57,14 @@ Status and the latest **public** support comment. Internal comments are never sh
 Start the real stack with `scripts/run-local.sh` ([RUN.md](../RUN.md)); the screenshots above come from the fake-provider stack, this part shows the real behaviour.
 
 - Ask `What is the hotel limit for business travel?`: a real grounded answer from *Travel Expense Rules* with its source chip. Then run `uv run --env-file ../.env python scripts/compare_search.py "What is the hotel limit for business travel?"` in `backend/` to show the embedding-only search putting *Google Drive for Business Not Opening* first and the hybrid search putting the right article first ([hybrid search](hybrid-search.md)).
+- Click the **heart-pulse icon** in the header (Search quality check). It runs the 44 labelled questions and the 42 that should be declined against the live index and explains the result in plain words: for 84% of questions the right article was the very first result, for 100% it was in the top 5.
+
+  ![Search quality check: how often the right article is found](demo/09-search-quality.png)
+
+  Scrolling down shows when it should *not* answer: the cut-off in use (0.12 on the reranker's score), the cut-off it would suggest, and how many answers it keeps and questions it correctly declines. These screenshots come from the real stack (the fake stack's tiny index would give meaningless numbers).
+
+  ![Search quality check: the answer cut-off](demo/10-search-quality-cutoff.png)
+
 - Ask `Where can I park my car at the office?`: not in the knowledge base, so a ticket is offered rather than an invented answer.
 - Click the thumbs-up under an answer; with LangSmith configured, show the trace of the turn (search, model calls, personal details masked) and the vote attached to it ([LangSmith](langsmith.md)).
 - Show the measured results: [evaluation report](evaluation-report.md), or run `uv run --env-file ../.env python scripts/run_eval.py --providers real --search-mode hybrid_rerank --out eval-out` (a few minutes and a cent or two of OpenAI usage).
@@ -77,3 +85,5 @@ Start the real stack with `scripts/run-local.sh` ([RUN.md](../RUN.md)); the scre
 ## Regenerating the screenshots
 
 `docker compose up -d --build --wait`, then `cd e2e && npm ci && E2E_TOKEN=e2e-local-token npm run demo`. The images and recording are rewritten in `docs/demo/`.
+
+The two search-quality images (09 and 10) need the real stack instead: start `scripts/run-local.sh`, then `cd e2e && DEMO_REAL_STACK=1 DEMO_EMAIL=<demo user> DEMO_PASSWORD=<their password> E2E_TOKEN=x npm run demo`. Without `DEMO_REAL_STACK` that test is skipped, so the fake-stack command above never overwrites them.
