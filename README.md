@@ -11,7 +11,7 @@ An IT and HR help-desk agent for the fictional company BuzzTech Solutions. An em
 | **Run it** | [RUN.md](RUN.md): unzip, `./scripts/run-local.sh`, sign in. Needs Docker and an OpenAI key |
 | **Which requirement is met where, and how it is proven** | [Requirements map](docs/requirements-map.md): every FR, AT test, rubric category and bonus |
 | **Measured quality** | [Evaluation report](docs/evaluation-report.md) |
-| **Architecture diagrams** | [Architecture](docs/architecture.md) |
+| **Architecture diagrams** | [Interactive architecture diagram](docs/architecture-diagram.html) (open in a browser: dark/light, hover for source links) and the Mermaid diagrams in [Architecture](docs/architecture.md) |
 | **Where this departs from the specification, and why** | [Design decisions](docs/design-decisions.md) (including the chunking strategy) |
 | **Demo** | [Demo script](docs/demo-script.md), screenshots and a recording in [docs/demo](docs/demo/) |
 

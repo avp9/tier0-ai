@@ -2,6 +2,8 @@
 
 One container image runs the FastAPI backend, which also serves the built React app, so the browser talks to a single origin (no CORS). State lives in PostgreSQL; the knowledge index is read-only files baked into the image ([ADR 0002](adr/0002-chroma-index-baked-into-image.md)).
 
+An interactive version of the system diagram, with a source link on every component, is in [architecture-diagram.html](architecture-diagram.html) (open it in a browser).
+
 ## System
 
 ```mermaid
