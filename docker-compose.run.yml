@@ -1,0 +1,59 @@
+# The complete app on one machine: web app + API, PostgreSQL and Redis.
+# Do not call this directly; scripts/run-local.sh prepares the secrets and the env file it needs.
+name: tier0
+services:
+  db:
+    image: postgres:16-bookworm
+    environment:
+      POSTGRES_USER: tier0
+      POSTGRES_PASSWORD: ${TIER0_DB_PASSWORD:?run scripts/run-local.sh}
+      POSTGRES_DB: tier0
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tier0 -d tier0"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  redis:
+    image: redis:8  # includes the search module the answer cache needs
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  # One-shot: builds the knowledge-base index into the volume, or confirms it is up to date.
+  indexer:
+    build: { context: ., target: local }
+    image: tier0-app:local
+    profiles: ["tools"]
+    env_file: .run/app.env
+    command: >
+      python scripts/build_index.py --kb-dir /app/data/knowledge_base --index-dir /app/data/chroma
+    volumes:
+      - index:/app/data/chroma
+
+  app:
+    build: { context: ., target: local }
+    image: tier0-app:local
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    env_file: .run/app.env
+    environment:
+      DATABASE_URL: postgresql://tier0:${TIER0_DB_PASSWORD}@db:5432/tier0
+      REDIS_URL: redis://redis:6379
+      VECTOR_STORE_PATH: /app/data/chroma
+    volumes:
+      - index:/app/data/chroma
+    ports:
+      - "${TIER0_BIND:-127.0.0.1}:${TIER0_PORT:-8000}:8000"
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  index:
