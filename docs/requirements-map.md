@@ -56,7 +56,7 @@ Where each requirement of the specification (`SmartDesk_AI_Complete_Specificatio
 | B. Ticket creation (20) | `tickets/`, `agent/ticket_flow.py`; live Jira evidence in the evaluation report; E2E AT-05 to AT-08 |
 | C. Ticket status (15) | `tickets/status.py`; E2E AT-09 to AT-13 |
 | D. Orchestration and routing (15) | `agent/graph.py`, `intent/`; routing accuracy in the evaluation report; E2E AT-15 to AT-17 |
-| E. Code quality and documentation (15) | This repository; [README](../README.md); [architecture](architecture.md) (Mermaid diagrams) |
+| E. Code quality and documentation (15) | This repository; [README](../README.md); [architecture](architecture.md) (Mermaid diagrams) and the [interactive diagram](architecture-diagram.html) |
 | F. Error handling and robustness (10) | [failure and adversarial testing](failure-and-adversarial-testing.md); E2E AT-13, AT-14, AT-18 |
 
 ## Bonus
