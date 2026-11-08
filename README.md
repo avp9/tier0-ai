@@ -4,16 +4,27 @@ An IT and HR help-desk agent for the fictional company BuzzTech Solutions. An em
 
 ![A ticket preview waiting for confirmation](docs/demo/04-ticket-preview.png)
 
+## Start here (for a grader)
+
+| | |
+|---|---|
+| **Run it** | [RUN.md](RUN.md): unzip, `./scripts/run-local.sh`, sign in. Needs Docker and an OpenAI key |
+| **Which requirement is met where, and how it is proven** | [Requirements map](docs/requirements-map.md): every FR, AT test, rubric category and bonus |
+| **Measured quality** | [Evaluation report](docs/evaluation-report.md) |
+| **Architecture diagrams** | [Architecture](docs/architecture.md) |
+| **Where this departs from the specification, and why** | [Design decisions](docs/design-decisions.md) (including the chunking strategy) |
+| **Demo** | [Demo script](docs/demo-script.md), screenshots and a recording in [docs/demo](docs/demo/) |
+
 ## What is and is not proven
 
 | | Status |
 |---|---|
-| Backend, agent, API, web app | Built and tested: 798 backend tests, 111 frontend tests, 28 browser tests (AT-01 to AT-18, accessibility), all run in CI on every pull request |
-| Real OpenAI, JEV and Jira | **Never exercised with real credentials.** Everything that touches them is tested against fakes and recorded responses. Run `backend/scripts/jira_smoke.py` and the Evaluation workflow once keys exist |
-| Answer quality numbers | **None yet.** The evaluation harness exists and runs; no run with real models has been recorded (see [evaluation report](docs/evaluation-report.md)) |
-| Azure deployment | Infrastructure code, pipelines and docs are written and linted. **Nothing has been deployed**; the pipelines have never run ([Azure setup](docs/azure-setup.md)) |
+| Backend, agent, API, web app | Built and tested: 1,113 backend tests, 229 frontend tests, 79 browser tests (acceptance tests AT-01 to AT-19, accessibility, feedback), all run in CI on every pull request |
+| Real OpenAI, JEV and Jira | **Exercised for real.** Employees created tickets in a live Jira Cloud project through the app, and `scripts/jira_smoke.py` reads them back (see [evaluation report](docs/evaluation-report.md#live-jira)). JEV answers intent classification (OpenAI is the fallback). Failure paths (timeouts, rejected fields, unknown outcomes) are tested against recorded and simulated responses |
+| Answer quality | **Measured** with real models on 2026-11-07 ([evaluation report](docs/evaluation-report.md)): hit@5 1.00 and 100% of answerable questions answered with a correct citation using hybrid search (82% with dense search alone); all 42 questions about missing topics lead to a ticket offer; routing 100%; ticket-flow and safety cases pass. On a stricter, model-judged set of 191 reference answers, 65% are fully correct and 90% cite a correct source. These sets are small: read them as evidence, not as guarantees |
+| Azure deployment | Infrastructure code, pipelines and `scripts/deploy-azure.sh` are written and linted or dry-run. **Nothing has been deployed to Azure**; the pipelines have never run ([Azure setup](docs/azure-setup.md)). Local execution is what the specification requires |
 
-The screenshots and recording in [docs/demo](docs/demo/) come from the fake-provider stack: the "answers" are a stand-in model quoting the knowledge base, so they show the product's behaviour, not real answer quality.
+The screenshots and recording in [docs/demo](docs/demo/) come from the fake-provider stack: the "answers" are a stand-in model quoting the knowledge base, so they show the product's behaviour, not real answer quality. The `run-local.sh` stack above uses the real models.
 
 ## Run the whole app with one command (real models)
 
@@ -68,8 +79,8 @@ The app creates its tables on start and creates the demo users that do not exist
 
 ## Run it with real providers
 
-1. **Build the real index** (about 21,000 entries; a few minutes and a small OpenAI charge): `OPENAI_API_KEY=... uv run python scripts/build_index.py` writes `.data/chroma`. A second run with unchanged data and the same embedding model is skipped.
-2. **Tune the answer threshold** with `uv run python scripts/inspect_retrieval.py --evaluate`. The default `RETRIEVAL_SCORE_THRESHOLD=0.30` is provisional, picked without real embeddings.
+1. **Build the real index** (about 21,000 entries; a small OpenAI charge, and about 15 to 40 minutes because it also builds the SPLADE keyword index; `--sparse none` skips that): `OPENAI_API_KEY=... uv run python scripts/build_index.py` writes `.data/chroma`. A second run with unchanged data and the same models is skipped. Set `SEARCH_MODE=hybrid_rerank` to use the keyword index and reranker ([hybrid search](docs/hybrid-search.md)).
+2. **Check or tune the answer threshold** with `uv run python scripts/inspect_retrieval.py --evaluate [--search-mode hybrid_rerank]` (defaults: `RETRIEVAL_SCORE_THRESHOLD=0.30` for dense search, `RERANK_SCORE_THRESHOLD=0.12` for hybrid), and compare the search variants with `scripts/compare_search.py`.
 3. **Check Jira** with `uv run python scripts/jira_smoke.py` (needs the `JIRA_*` settings below and a project with a "Requester Email" field).
 4. **Run** as above with `LLM_PROVIDER=openai TICKETING_PROVIDER=jira` (the defaults) and the keys set.
 
@@ -117,16 +128,18 @@ Pull requests must pass: backend, frontend, e2e, image, infra, dependency-audit 
 
 ## Deploying
 
-Target: Azure Container Apps (staging and production) plus PostgreSQL B1ms, about $16 to 21 a month. Nothing is deployed yet. The path is: [Azure setup](docs/azure-setup.md) (one-time, needs your approval for cost), then merges to `main` build one image per commit and deploy it to staging, run smoke tests, wait for a human to approve production, and deploy the same image ([rollback](docs/rollback.md)).
+Target: Azure Container Apps (staging and production) plus PostgreSQL B1ms, about $16 to 24 a month. Nothing is deployed yet. For a quick demonstration on Azure, `scripts/deploy-azure.sh` instead starts the same containers on one small VM. The path is: [Azure setup](docs/azure-setup.md) (one-time, needs your approval for cost), then merges to `main` build one image per commit and deploy it to staging, run smoke tests, wait for a human to approve production, and deploy the same image ([rollback](docs/rollback.md)).
 
 ## Documentation
 
 | | |
 |---|---|
 | [Architecture](docs/architecture.md) | Diagrams of the system, the conversation graph, the ticket flow and the delivery pipeline |
+| [Requirements map](docs/requirements-map.md) | Each requirement, acceptance test, rubric category and bonus, with where it is met and how it is proven |
 | [Design decisions](docs/design-decisions.md) | Where and why this departs from the specification, with the ADRs |
-| [Demo script](docs/demo-script.md) | A 10-minute walkthrough of the three flows, with screenshots |
+| [Demo script](docs/demo-script.md) | A 10-minute walkthrough of the three flows and the evaluation, with screenshots |
 | [Component reference](docs/reference.md) | Commands and behaviour for each part |
+| [Hybrid search](docs/hybrid-search.md), [LangSmith](docs/langsmith.md) | SPLADE and reranker search with measured gains and sample queries; tracing, feedback and evaluation experiments |
 | [Answer cache](docs/semantic-cache.md) | Redis semantic cache: how questions are matched, what is stored, setup and tuning |
 | [Evaluation report](docs/evaluation-report.md), [Observability](docs/observability.md), [Failure testing](docs/failure-and-adversarial-testing.md), [Azure setup](docs/azure-setup.md), [Rollback](docs/rollback.md) | |
 | [Project plan](PROJECT_PLAN.md), [backlog](PRODUCT_BACKLOG.md), [glossary](GLOSSARY.md), [changelog](CHANGELOG.md) | |

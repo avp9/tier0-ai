@@ -168,6 +168,8 @@ class Evaluator:
                     break
                 seen = self._say(thread, details.pop(0))
                 outcome.latencies.append(seen.seconds)
+        if seen.turn.awaiting is None and case.expect_tickets == 0:
+            return  # the employee backed out before the preview: no ticket is the right outcome
         if seen.turn.awaiting is not Awaiting.CONFIRM_TICKET:
             outcome.failures.append(
                 f"never reached the confirmation step (waiting for {seen.turn.awaiting})"

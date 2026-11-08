@@ -1,0 +1,67 @@
+{
+  "providers": {
+    "llm": "openai",
+    "tickets": "in-memory fake",
+    "search": "dense"
+  },
+  "retrieval": {
+    "cases": 44,
+    "recall": {
+      "1": 0.6363636363636364,
+      "3": 0.8143939393939394,
+      "5": 0.856060606060606
+    },
+    "hit": {
+      "1": 0.6818181818181818,
+      "3": 0.8409090909090909,
+      "5": 0.8636363636363636
+    },
+    "mrr": 0.7556818181818182,
+    "gap_score_max": 0.6300137042999268,
+    "answerable_score_min": 0.2646753787994385,
+    "separable": false
+  },
+  "knowledge": {
+    "cases": 44,
+    "answer_rate": 0.8181818181818182,
+    "cited_expected_source_rate": 0.8181818181818182,
+    "false_escalation_rate": 0.18181818181818182
+  },
+  "gaps": {
+    "cases": 42,
+    "escalation_rate": 1.0,
+    "answered_wrongly_rate": 0.0
+  },
+  "routing": {
+    "checks": 103,
+    "accuracy": 1.0
+  },
+  "ticket_flows": {
+    "cases": 5,
+    "pass_rate": 1.0
+  },
+  "status": {
+    "cases": 4,
+    "pass_rate": 1.0
+  },
+  "safety": {
+    "cases": 4,
+    "pass_rate": 1.0
+  },
+  "routing_cases": {
+    "cases": 12,
+    "pass_rate": 1.0
+  },
+  "latency_seconds": {
+    "turns": 120,
+    "p50": 0.8540005839895457,
+    "p95": 4.695080999983475
+  },
+  "usage": {
+    "chat_calls": 91,
+    "embedding_calls": 174,
+    "estimated_dollars": 0.0101767275,
+    "note": "Estimate: characters/4 as tokens, placeholder prices; intent calls to JEV are not counted. No cost is shown for fake providers."
+  },
+  "failures": []
+}

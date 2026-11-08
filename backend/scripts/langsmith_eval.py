@@ -77,6 +77,7 @@ def settings_for(args: argparse.Namespace) -> Settings:
         ticketing_provider="fake",
         llm_provider="fake" if args.providers == "fake" else "openai",
         search_mode=args.search_mode,
+        redis_url=None,  # an answer cache would make latency and cost meaningless
         vector_store_path=str(args.index_dir),
         langsmith_tracing=False,  # experiments are traced by LangSmith itself, not the app's tracer
     )

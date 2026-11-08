@@ -40,4 +40,5 @@ More in [docs/demo-script.md](docs/demo-script.md).
 - **Other commands:** `./scripts/run-local.sh logs | status | down` (stop, keeping data) `| reset` (stop and delete all data).
 - **No Docker or no key?** The unit tests need neither: see "Run it from source" in [README.md](README.md). 
 - **On Azure:** `./scripts/deploy-azure.sh` (needs the Azure CLI; creates a small VM and starts the same containers on it; `destroy` removes it).
-- Architecture, design decisions, evaluation and the full configuration table are in [README.md](README.md) and [docs/](docs/).
+- **For marking:** [docs/requirements-map.md](docs/requirements-map.md) lists every requirement, acceptance test, rubric category and bonus with where it is met and how it is proven; [docs/evaluation-report.md](docs/evaluation-report.md) has the measured results.
+- Architecture, design decisions and the full configuration table are in [README.md](README.md) and [docs/](docs/).

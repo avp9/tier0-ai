@@ -53,6 +53,17 @@ def make(redis_url: str) -> Iterator[Make]:
                     cache._client.delete(key)
 
 
+def hit(cache: RedisSemanticCache, vector: list[float]) -> CachedAnswer | None:
+    """A lookup that allows for Redis finishing indexing an entry a moment after it was stored."""
+    found = None
+    for _ in range(60):
+        found = cache.lookup(vector)
+        if found is not None:
+            break
+        time.sleep(0.05)
+    return found
+
+
 def unit(*values: float) -> list[float]:
     norm = math.sqrt(sum(v * v for v in values))
     return [v / norm for v in values]
@@ -68,7 +79,7 @@ def test_an_identical_question_gets_the_stored_answer_back_intact(make: Make) ->
     cache = make(min_similarity=0.95)
     assert cache.lookup(unit(1, 0, 0, 0)) is None  # nothing yet (and the index is created)
     cache.store("how do I reset my password", unit(1, 0, 0, 0), ANSWER)
-    assert cache.lookup(unit(1, 0, 0, 0)) == ANSWER
+    assert hit(cache, unit(1, 0, 0, 0)) == ANSWER
 
 
 def test_the_exact_question_is_found_without_a_vector_whatever_its_capitals_and_punctuation(
@@ -106,20 +117,20 @@ def test_clearing_removes_this_namespaces_answers_and_leaves_the_others(make: Ma
         cache.store("q one", unit(1, 0, 0, 0), ANSWER)
     mine.clear()
     assert mine.lookup_exact("q one") is None and mine.lookup(unit(1, 0, 0, 0)) is None
-    assert theirs.lookup_exact("q one") == ANSWER and theirs.lookup(unit(1, 0, 0, 0)) == ANSWER
+    assert theirs.lookup_exact("q one") == ANSWER and hit(theirs, unit(1, 0, 0, 0)) == ANSWER
 
 
 def test_a_stored_answer_is_found_both_exactly_and_by_meaning(make: Make) -> None:
     cache = make(min_similarity=0.95)
     cache.store("How do I reset my password?", unit(1, 0, 0, 0), ANSWER)
     assert cache.lookup_exact("how do i reset my password") == ANSWER
-    assert cache.lookup(unit(1, 0.1, 0, 0)) == ANSWER
+    assert hit(cache, unit(1, 0.1, 0, 0)) == ANSWER
 
 
 def test_a_similar_question_hits_and_a_different_one_misses(make: Make) -> None:
     cache = make(min_similarity=0.95)
     cache.store("q", unit(1, 0, 0, 0), ANSWER)
-    assert cache.lookup(unit(1, 0.15, 0, 0)) == ANSWER  # similarity about 0.99
+    assert hit(cache, unit(1, 0.15, 0, 0)) == ANSWER  # similarity about 0.99
     assert cache.lookup(unit(1, 0.6, 0, 0)) is None  # about 0.86
     assert cache.lookup(unit(0, 1, 0, 0)) is None
 
@@ -135,7 +146,7 @@ def test_the_similarity_setting_decides_how_close_is_close_enough(make: Make) ->
 def test_entries_expire(make: Make) -> None:
     cache = make(ttl_seconds=1)
     cache.store("q", unit(1, 0, 0, 0), ANSWER)
-    assert cache.lookup(unit(1, 0, 0, 0)) == ANSWER
+    assert hit(cache, unit(1, 0, 0, 0)) == ANSWER
     time.sleep(2.2)
     assert cache.lookup(unit(1, 0, 0, 0)) is None
 
@@ -144,7 +155,7 @@ def test_a_different_namespace_never_sees_the_entry(make: Make) -> None:
     old, new = make(namespace="index-v1"), make(namespace="index-v2")
     old.store("q", unit(1, 0, 0, 0), ANSWER)
     assert new.lookup(unit(1, 0, 0, 0)) is None
-    assert old.lookup(unit(1, 0, 0, 0)) == ANSWER
+    assert hit(old, unit(1, 0, 0, 0)) == ANSWER
 
 
 def test_vectors_of_a_different_size_get_their_own_index(make: Make) -> None:
@@ -152,15 +163,15 @@ def test_vectors_of_a_different_size_get_their_own_index(make: Make) -> None:
     cache.store("q", unit(1, 0, 0, 0), ANSWER)
     assert cache.lookup(unit(1, 0, 0, 0, 0, 0)) is None  # no error, just a miss
     cache.store("q6", unit(1, 0, 0, 0, 0, 0), CachedAnswer("six", []))
-    assert cache.lookup(unit(1, 0, 0, 0, 0, 0)) == CachedAnswer("six", [])
-    assert cache.lookup(unit(1, 0, 0, 0)) == ANSWER  # the 4-wide index is a separate one
+    assert hit(cache, unit(1, 0, 0, 0, 0, 0)) == CachedAnswer("six", [])
+    assert hit(cache, unit(1, 0, 0, 0)) == ANSWER  # the 4-wide index is a separate one
 
 
 def test_a_second_instance_shares_the_entries_like_another_server_would(make: Make) -> None:
     first = make(namespace="shared-ns")
     first.store("q", unit(1, 0, 0, 0), ANSWER)
     second = make(namespace="shared-ns")
-    assert second.lookup(unit(1, 0, 0, 0)) == ANSWER
+    assert hit(second, unit(1, 0, 0, 0)) == ANSWER
 
 
 def test_an_unreadable_entry_is_a_miss_and_does_not_count_as_an_outage(make: Make) -> None:
@@ -168,7 +179,7 @@ def test_an_unreadable_entry_is_a_miss_and_does_not_count_as_an_outage(make: Mak
     cache.store("q", unit(1, 0, 0, 0), ANSWER)
     cache._cache.store(prompt="bad", response="not json", vector=unit(0, 1, 0, 0))
     assert cache.lookup(unit(0, 1, 0, 0)) is None
-    assert cache.lookup(unit(1, 0, 0, 0)) == ANSWER  # still working
+    assert hit(cache, unit(1, 0, 0, 0)) == ANSWER  # still working
 
 
 def test_when_redis_is_unreachable_it_fails_open_and_stops_trying_for_a_while() -> None:
@@ -201,7 +212,7 @@ def test_it_recovers_when_redis_comes_back(redis_url: str) -> None:
     assert cache.lookup(unit(1, 0, 0, 0)) is None and cache._cache is None  # still cooling down
     now[0] = 106.0
     cache.store("q", unit(1, 0, 0, 0), ANSWER)
-    assert cache.lookup(unit(1, 0, 0, 0)) == ANSWER
+    assert hit(cache, unit(1, 0, 0, 0)) == ANSWER
     assert cache._cache is not None
     cache._cache.delete()
     for key in cache._exact_client().scan_iter(f"tier0:semcache:exact:{cache._namespace}:*"):

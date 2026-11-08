@@ -12,8 +12,6 @@
 frontend/dist
 e2e
 docs
-legacy
-backend/legacy
 qa_dataset.json
 OP.png
 *.md
