@@ -3,11 +3,13 @@
   uv run python scripts/langsmith_eval.py upload
   uv run python scripts/langsmith_eval.py run retrieval           # search only, cheap
   uv run python scripts/langsmith_eval.py run knowledge --limit 10
+  uv run python scripts/langsmith_eval.py run qa --prefix after-reranking  # reference answers
   uv run python scripts/langsmith_eval.py run all --prefix after-reranking
 
-``upload`` makes the four datasets (tier0-retrieval, tier0-knowledge, tier0-gaps,
-tier0-conversations) match data/evaluation; run it again whenever those files change. ``run`` makes
-an experiment per dataset: each case is run through the real search or agent, scored, and shown in
+``upload`` makes the five datasets (tier0-retrieval, tier0-knowledge, tier0-gaps,
+tier0-conversations, tier0-qa) match data/evaluation; run it again whenever those files
+change. ``run`` makes an experiment per dataset: each case is run through the real search or
+agent, scored, and shown in
 LangSmith next to earlier experiments, with the full trace of every case. Needs LANGSMITH_API_KEY
 (and OPENAI_API_KEY for real providers). Tickets always go to an in-memory fake ticket system.
 Experiments label themselves with the models, top-k, threshold and git commit they ran with.
@@ -33,7 +35,10 @@ from tier0.agent.service import build_agent
 from tier0.config import Settings
 from tier0.evalrun import langsmith_eval as ls_eval
 from tier0.evalrun.cases import gap_cases, knowledge_cases, load_conversation_cases
+from tier0.evalrun.qa_dataset import load_jsonl
 from tier0.evalrun.runner import Evaluator
+from tier0.llm.base import ChatModel
+from tier0.llm.openai_chat import OpenAIChatModel
 from tier0.rag.evaluation import load_cases
 from tier0.tickets.fake import FakeTicketAdapter
 from tier0.tickets.submission import InMemorySubmissionStore
@@ -41,7 +46,13 @@ from tier0.tickets.submission import InMemorySubmissionStore
 REPO_ROOT = Path(__file__).resolve().parents[2]
 EVAL_DIR = REPO_ROOT / "data" / "evaluation"
 KEYS = list(ls_eval.DATASETS)
-CONCURRENCY = {"retrieval": 4, "knowledge": 4, "gaps": 4, "conversations": 1}  # tickets are shared
+CONCURRENCY = {
+    "retrieval": 4,
+    "knowledge": 4,
+    "gaps": 4,
+    "conversations": 1,
+    "qa": 4,
+}  # tickets are shared
 
 
 def specs(key: str) -> list[ls_eval.ExampleSpec]:
@@ -50,6 +61,7 @@ def specs(key: str) -> list[ls_eval.ExampleSpec]:
         "retrieval": lambda: ls_eval.retrieval_examples(retrieval),
         "knowledge": lambda: ls_eval.knowledge_examples(knowledge_cases(retrieval)),
         "gaps": lambda: ls_eval.gap_examples(gap_cases(EVAL_DIR / "knowledge_gaps.json")),
+        "qa": lambda: ls_eval.qa_examples(load_jsonl(EVAL_DIR / "qa_dataset.jsonl")),
         "conversations": lambda: ls_eval.conversation_examples(
             load_conversation_cases(EVAL_DIR / "conversation_cases.json")
         ),
@@ -113,6 +125,7 @@ def targets(parts: Components, evaluator: Evaluator) -> dict[str, Any]:
         "knowledge": ls_eval.knowledge_target(evaluator),
         "gaps": ls_eval.gap_target(evaluator),
         "conversations": ls_eval.conversation_target(evaluator),
+        "qa": ls_eval.qa_target(evaluator),
     }
 
 
@@ -135,6 +148,11 @@ def command_run(args: argparse.Namespace, client: Client) -> int:
     agent = build_agent(parts.deps, MemorySaver(serde=make_serializer()))  # no app tracer
     run_targets = targets(parts, Evaluator(agent, adapter))
     metadata = experiment_metadata(settings)
+    judge: ChatModel | None = None  # grades answers against the reference (real models only)
+    if args.providers == "real":
+        judge = OpenAIChatModel(
+            api_key=os.environ["OPENAI_API_KEY"], model=settings.openai_model_name
+        )
     chosen = KEYS if args.dataset == "all" else [args.dataset]
     for key in chosen:
         name = ls_eval.DATASETS[key]
@@ -145,7 +163,7 @@ def command_run(args: argparse.Namespace, client: Client) -> int:
         results = client.evaluate(
             run_targets[key],
             data=data,
-            evaluators=ls_eval.evaluators_for(key),
+            evaluators=ls_eval.evaluators_for(key, judge),
             experiment_prefix=f"{args.prefix}-{key}",
             description=f"{key} cases through the real system ({args.providers} providers)",
             metadata={**metadata, "dataset": key},
