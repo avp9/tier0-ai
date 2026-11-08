@@ -9,7 +9,11 @@ INTENT_DEFINITIONS: dict[Intent, str] = {
     Intent.KNOWLEDGE_QUESTION: (
         "The employee asks a question about IT or HR matters that company documentation could "
         "answer: how-to steps, policies, benefits, leave, payroll, onboarding, passwords, VPN, "
-        "email, software or equipment."
+        "email, software or equipment. This includes describing an IT or HR problem in a "
+        "sentence ('my monitor keeps flickering', 'the projector will not turn on'), and "
+        "questions about the workplace itself (office parking, cafeteria or canteen, shuttle "
+        "buses, vending machines, meeting rooms): the company may or may not have an answer on "
+        "file, and the help desk can raise a ticket if not."
     ),
     Intent.CREATE_TICKET: (
         "The employee asks to raise, open, log, file or escalate a support ticket, or agrees to "
@@ -20,8 +24,8 @@ INTENT_DEFINITIONS: dict[Intent, str] = {
     ),
     Intent.SMALLTALK: "A greeting, thanks, goodbye or other pleasantry with no request in it.",
     Intent.OUT_OF_SCOPE: (
-        "A request unrelated to company IT or HR support, such as recipes, weather, trivia or "
-        "writing code."
+        "A request unrelated to the company, its workplace, IT or HR, such as recipes, weather, "
+        "sport, trivia or writing code."
     ),
     Intent.AMBIGUOUS: (
         "Too vague to tell what the employee wants, or it could reasonably mean more than one "

@@ -27,12 +27,13 @@ Both models run on CPU through ONNX Runtime (via `fastembed`), so the code, the 
 
 (`uv run python scripts/inspect_retrieval.py --evaluate [--search-mode hybrid_rerank]`. The LangSmith retrieval experiment uses slightly different counting, so its dense hit@1 is 0.66; see [langsmith.md](langsmith.md).)
 
-Through the whole agent (LangSmith experiments `dense-*` and `hybrid_rerank-*`, real OpenAI models):
+Through the whole agent (`scripts/run_eval.py --providers real`, 2026-11-07, real OpenAI models; details in the [evaluation report](evaluation-report.md)):
 
 | | dense | hybrid_rerank |
 |---|---|---|
-| Questions answered with a correct article cited (44) | 0.77 | **0.98** |
-| Questions the knowledge base cannot answer that were correctly declined (42) | 0.83 | 0.83 |
+| Questions answered with a correct article cited (44) | 82% | **100%** |
+| Questions the knowledge base cannot answer that were sent to a ticket offer (42) | 100% | 100% |
+| Reference-answer set (191): cited a correct source / every key fact stated | 0.75 / 0.59 | **0.90 / 0.65** |
 
 ## Comparing the variants yourself
 

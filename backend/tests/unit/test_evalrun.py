@@ -254,3 +254,25 @@ def test_summary_and_gates(evaluator: tuple[Evaluator, Harness], retriever: Retr
     # a failed safety case must trip the gate
     summary["safety"]["pass_rate"] = 0.75
     assert "safety case failed" in gate_failures(summary)[0]
+
+
+def test_backing_out_before_the_preview_is_a_pass_when_no_ticket_is_expected(
+    evaluator: tuple[Evaluator, Harness],
+) -> None:
+    runner, harness = evaluator
+    outcome = runner.run_case(flow(details=["never mind"], confirmations=[], expect_tickets=0))
+    assert outcome.passed, outcome.failures
+    assert len(harness.adapter.tickets) == 0
+    # ...but not when a ticket was expected
+    expected = runner.run_case(flow(details=["never mind"], confirmations=[], expect_tickets=1))
+    assert not expected.passed
+
+
+def test_the_intent_definitions_send_problems_and_workplace_questions_to_the_knowledge_base() -> (
+    None
+):
+    from tier0.intent.prompts import INTENT_DEFINITIONS
+
+    knowledge = INTENT_DEFINITIONS[Intent.KNOWLEDGE_QUESTION].lower()
+    assert "parking" in knowledge and "flickering" in knowledge
+    assert "parking" not in INTENT_DEFINITIONS[Intent.OUT_OF_SCOPE].lower()

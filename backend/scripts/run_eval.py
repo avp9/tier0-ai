@@ -50,6 +50,12 @@ def main() -> int:
         default=None,
         help="only run this many knowledge conversations (limits cost)",
     )
+    parser.add_argument(
+        "--search-mode",
+        choices=["dense", "hybrid_rerank"],
+        default="dense",
+        help="dense: embeddings alone. hybrid_rerank: plus SPLADE and a reranker (needs the index)",
+    )
     parser.add_argument("--price-chat-in", type=float, default=Prices.chat_input)
     parser.add_argument("--price-chat-out", type=float, default=Prices.chat_output)
     parser.add_argument("--price-embedding", type=float, default=Prices.embedding)
@@ -63,6 +69,8 @@ def main() -> int:
         "ticketing_provider": "fake",
         "llm_provider": "fake" if args.providers == "fake" else "openai",
         "vector_store_path": str(args.index_dir),
+        "search_mode": args.search_mode,
+        "redis_url": None,  # an answer cache would make latency and cost meaningless
     }
     settings = Settings(**base)  # type: ignore[arg-type]
     parts = build_components(settings, None, submission_store=InMemorySubmissionStore())
@@ -93,7 +101,11 @@ def main() -> int:
             cases=[evaluator.run_case(c) for c in conversations],
             usage=usage,
             prices=prices,
-            providers={"llm": settings.llm_provider, "tickets": "in-memory fake"},
+            providers={
+                "llm": settings.llm_provider,
+                "tickets": "in-memory fake",
+                "search": args.search_mode,
+            },
         )
 
     summary = summarize(results)

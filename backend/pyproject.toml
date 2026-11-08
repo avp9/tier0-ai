@@ -45,7 +45,6 @@ pythonpath = ["tests"]
 
 [tool.ruff]
 line-length = 100
-extend-exclude = ["legacy"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "S"]
