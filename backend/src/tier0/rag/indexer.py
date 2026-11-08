@@ -13,6 +13,7 @@ from chromadb.api.shared_system_client import SharedSystemClient
 
 from tier0.rag.embeddings import Embedder
 from tier0.rag.schema import KnowledgeRecord
+from tier0.rag.sparse import SparseEncoder, SparseIndex, read_sparse_meta
 
 COLLECTION_NAME = "knowledge_base"
 INDEX_SCHEMA_VERSION = 1
@@ -28,6 +29,7 @@ class BuildResult:
     skipped: bool
     record_count: int
     content_hash: str
+    sparse_built: bool = False  # the keyword (SPLADE) index was (re)built in this run
 
 
 def compute_content_hash(records: list[KnowledgeRecord], model_id: str) -> str:
@@ -77,7 +79,39 @@ def read_index_hash(index_dir: Path) -> tuple[str, int] | None:
     return (str(stored), collection.count()) if stored else None
 
 
-def build_index(records: list[KnowledgeRecord], embedder: Embedder, index_dir: Path) -> BuildResult:
+def build_index(
+    records: list[KnowledgeRecord],
+    embedder: Embedder,
+    index_dir: Path,
+    sparse: SparseEncoder | None = None,
+) -> BuildResult:
+    """Build the Chroma index, and with ``sparse`` the keyword index beside it. Each is skipped
+    when it already matches the records (the keyword one is the slow part)."""
+    dense = _build_dense(records, embedder, index_dir)
+    if sparse is None:
+        return dense
+    current = read_sparse_meta(index_dir)
+    if current == (sparse.model_id, dense.content_hash):
+        return dense
+    ordered = sorted(records, key=lambda r: r.document_id)
+    vectors = sparse.encode_documents([r.content for r in ordered])
+    SparseIndex(
+        [r.document_id for r in ordered],
+        vectors,
+        model_id=sparse.model_id,
+        index_hash=dense.content_hash,
+    ).save(index_dir)
+    return BuildResult(
+        skipped=dense.skipped,
+        record_count=dense.record_count,
+        content_hash=dense.content_hash,
+        sparse_built=True,
+    )
+
+
+def _build_dense(
+    records: list[KnowledgeRecord], embedder: Embedder, index_dir: Path
+) -> BuildResult:
     if not records:
         raise ValueError("cannot build an index from zero records")
     content_hash = compute_content_hash(records, embedder.model_id)

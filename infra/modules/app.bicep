@@ -58,7 +58,8 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
         {
           name: 'tier0'
           image: image
-          resources: { cpu: json('0.5'), memory: '1Gi' }
+          // 2 GiB: the SPLADE and reranker models take about 1 GB once loaded.
+          resources: { cpu: json('1.0'), memory: '2Gi' }
           env: [
             { name: 'APP_ENV', value: appEnv }
             // One reverse proxy (the Container Apps ingress) sits in front of the app.

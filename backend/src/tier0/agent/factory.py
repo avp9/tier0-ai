@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -23,13 +24,15 @@ from tier0.rag.answerability import AnswerabilityConfig
 from tier0.rag.answering import AnswerService
 from tier0.rag.embeddings import Embedder, FakeEmbedder, OpenAIEmbedder
 from tier0.rag.indexer import open_collection
-from tier0.rag.retriever import Retriever
+from tier0.rag.rerank import CrossEncoderReranker, FakeReranker, Reranker
+from tier0.rag.retriever import HybridSearch, Retriever
 from tier0.rag.rewrite import QuestionRewriter
 from tier0.rag.semantic_cache import (
     RedisSemanticCache,
     SemanticCache,
     cache_namespace,
 )
+from tier0.rag.sparse import FakeSparseEncoder, SparseEncoder, SparseIndex, SpladeEncoder
 from tier0.tickets.base import TicketAdapter
 from tier0.tickets.config import JiraConfig
 from tier0.tickets.drafting import TicketDrafter
@@ -38,6 +41,8 @@ from tier0.tickets.jira_adapter import JiraAdapter
 from tier0.tickets.postgres_store import PostgresSubmissionStore
 from tier0.tickets.status import TicketStatusService
 from tier0.tickets.submission import SubmissionStore, TicketSubmissionService
+
+log = logging.getLogger(__name__)
 
 
 class ChatNotConfigured(Exception):
@@ -76,6 +81,60 @@ def jira_config(settings: Settings) -> JiraConfig:
     )
 
 
+def score_threshold(settings: Settings, retriever: Retriever) -> float:
+    """The bar to answer at, for the scores this retriever actually gives."""
+    return (
+        settings.rerank_score_threshold if retriever.reranks else settings.retrieval_score_threshold
+    )
+
+
+def open_search(
+    index_dir: Path,
+    embedder: Embedder,
+    mode: str,
+    *,
+    fake_models: bool = False,
+    model_cache_dir: str | None = None,
+) -> Retriever:
+    """The knowledge-base search: hybrid if asked for and possible, otherwise dense."""
+    if mode != "hybrid_rerank":
+        return Retriever.open(index_dir, embedder)
+    try:
+        encoder: SparseEncoder
+        reranker: Reranker
+        if fake_models:
+            encoder, reranker = FakeSparseEncoder(), FakeReranker()
+        else:
+            encoder = SpladeEncoder(cache_dir=model_cache_dir)
+            reranker = CrossEncoderReranker(cache_dir=model_cache_dir)
+        hybrid = HybridSearch(SparseIndex.load(index_dir), encoder, reranker)
+        if hybrid.index.model_id != encoder.model_id:
+            raise ValueError(
+                f"keyword index made with {hybrid.index.model_id}, not {encoder.model_id}"
+            )
+        retriever = Retriever.open(index_dir, embedder, hybrid)
+        # Load the models now, not during someone's first question.
+        encoder.encode_query("warm up")
+        reranker.score("warm up", ["warm up"])
+        return retriever
+    except Exception:
+        log.warning(
+            "SEARCH_MODE=hybrid_rerank is not available; searching with embeddings alone",
+            exc_info=True,
+        )
+        return Retriever.open(index_dir, embedder)
+
+
+def open_retriever(settings: Settings, embedder: Embedder) -> Retriever:
+    return open_search(
+        Path(settings.vector_store_path),
+        embedder,
+        settings.search_mode,
+        fake_models=settings.llm_provider == "fake",
+        model_cache_dir=settings.model_cache_dir or None,
+    )
+
+
 def build_semantic_cache(settings: Settings, retriever: Retriever) -> SemanticCache | None:
     """The answer cache, when a Redis URL is configured. Nothing is contacted until first use."""
     if settings.redis_url is None:
@@ -87,7 +146,7 @@ def build_semantic_cache(settings: Settings, retriever: Retriever) -> SemanticCa
         settings.openai_model_name,
         answering.ANSWER_SYSTEM,
         answerability.SUFFICIENCY_SYSTEM,
-        settings.retrieval_score_threshold,
+        score_threshold(settings, retriever),
         settings.retrieval_top_k,
     )
     return RedisSemanticCache(
@@ -150,7 +209,7 @@ def build_components(
     else:
         adapter = JiraAdapter(jira_config(settings))
 
-    retriever = Retriever.open(Path(settings.vector_store_path), embedder)
+    retriever = open_retriever(settings, embedder)
     cache = build_semantic_cache(settings, retriever)
     deps = AgentDependencies(
         classifier=classifier,
@@ -158,7 +217,7 @@ def build_components(
             retriever,
             chat,
             AnswerabilityConfig(
-                score_threshold=settings.retrieval_score_threshold, top_k=settings.retrieval_top_k
+                score_threshold=score_threshold(settings, retriever), top_k=settings.retrieval_top_k
             ),
             cache=cache,
         ),

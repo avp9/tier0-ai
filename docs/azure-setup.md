@@ -8,7 +8,7 @@ Nothing here has been created yet. Creating these resources starts billing, so i
 |---|---|---|
 | Log Analytics workspace `log-tier0` | Pay-per-GB, 30-day retention, 1 GB/day cap | App logs; the cap prevents a surprise bill |
 | Container Apps environment `cae-tier0` | Consumption plan only | Hosts both apps |
-| `ca-tier0-staging`, `ca-tier0-prod` | 0.5 vCPU, 1 GiB, scale to zero, **at most 1 replica** | One image, two environments |
+| `ca-tier0-staging`, `ca-tier0-prod` | 1 vCPU, 2 GiB, scale to zero, **at most 1 replica** | One image, two environments |
 | PostgreSQL Flexible Server | Burstable B1ms, PostgreSQL 16, 32 GB, 7-day backups | Users, conversation checkpoints, ticket submissions |
 | Databases `tier0_staging`, `tier0_prod` | | One per environment, same server |
 
@@ -20,9 +20,9 @@ At most one replica because the chat and login rate limits are counted in memory
 |---|---|---|
 | PostgreSQL B1ms compute | $0.017 per hour × 730 h | $12.41 |
 | PostgreSQL storage | 32 GB × $0.115 per GB-month | $3.68 |
-| Container Apps (both apps) | vCPU $0.000024/s active, $0.000003/s idle; first 180,000 vCPU-s, 360,000 GiB-s and 2M requests free each month | about $0 to 3 at demo traffic |
+| Container Apps (both apps) | vCPU $0.000024/s active, $0.000003/s idle; first 180,000 vCPU-s, 360,000 GiB-s and 2M requests free each month | about $0 to 6 at demo traffic (1 vCPU and 2 GiB, because the search models need about 1 GB) |
 | Log Analytics | first 5 GB/month free, then about $2.30/GB; capped at 1 GB/day | about $0 to 2 |
-| **Total** | | **about $16 to 21**, plus OpenAI/JEV usage |
+| **Total** | | **about $16 to 24**, plus OpenAI/JEV usage |
 
 Backups up to the provisioned size are included. The database is the only cost that runs all day: Container Apps scale to zero, but PostgreSQL B1ms does not. To pause spending between demo periods, stop the server (`az postgres flexible-server stop`; Azure restarts it after 7 days) or delete the resource group.
 

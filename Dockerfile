@@ -26,7 +26,6 @@ COPY backend/pyproject.toml backend/uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
 COPY backend/src ./src
 RUN uv sync --frozen --no-dev --no-editable
-
 # Replaced by --build-context index=<dir>; empty when not supplied (the prod build then fails).
 FROM scratch AS index
 
@@ -54,7 +53,20 @@ HEALTHCHECK --interval=5s --timeout=3s --retries=20 \
   CMD python -c "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/api/health', timeout=2)"
 CMD ["uvicorn", "--factory", "tier0.api.app:create_app_from_env", "--host", "0.0.0.0", "--port", "8000"]
 
+# A stage of its own, so only the prod image pays for (and waits for) the download.
+FROM builder AS models
+# The two search models (SPLADE and the reranker, ~600 MB) are downloaded now, so the running
+# container never needs the internet and starts without waiting for a download.
+RUN /opt/venv/bin/python -c "\
+from tier0.rag.rerank import CrossEncoderReranker; from tier0.rag.sparse import SpladeEncoder; \
+SpladeEncoder(cache_dir='/opt/models').encode_query('warm up'); \
+CrossEncoderReranker(cache_dir='/opt/models').score('warm up', ['warm up'])"
+
 FROM runtime AS prod
+# Search with SPLADE and a reranker as well as embeddings. If the index has no keyword part (or
+# the models cannot load) the app logs a warning and uses embeddings alone.
+COPY --from=models --chown=tier0 /opt/models /opt/models
+ENV SEARCH_MODE=hybrid_rerank MODEL_CACHE_DIR=/opt/models HF_HUB_OFFLINE=1
 ARG INDEX_HASH
 RUN test -n "$INDEX_HASH" \
     || (echo "Set --build-arg INDEX_HASH=<hash of the supplied index>" >&2; exit 1)

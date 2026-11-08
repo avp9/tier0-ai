@@ -13,6 +13,7 @@ import os
 import sys
 from pathlib import Path
 
+from tier0.agent.factory import open_search
 from tier0.rag.embeddings import Embedder, FakeEmbedder, OpenAIEmbedder
 from tier0.rag.evaluation import (
     RetrievalReport,
@@ -96,11 +97,23 @@ def main() -> None:
     parser.add_argument(
         "--gaps", type=Path, default=REPO_ROOT / "data" / "evaluation" / "knowledge_gaps.json"
     )
+    parser.add_argument(
+        "--search-mode",
+        choices=["dense", "hybrid_rerank"],
+        default="dense",
+        help="hybrid_rerank adds SPLADE and a reranker (needs the keyword index)",
+    )
     args = parser.parse_args()
     if not args.query and not args.evaluate:
         parser.error("give a query, or use --evaluate")
 
-    retriever = Retriever.open(args.index_dir, make_embedder(args.embedder, args.model))
+    retriever = open_search(
+        args.index_dir,
+        make_embedder(args.embedder, args.model),
+        args.search_mode,
+        fake_models=args.embedder == "fake",
+    )
+    print(f"search: {'SPLADE + reranker' if retriever.reranks else 'embeddings only'}")
     if args.query:
         print_hits(retriever, args.query, args.k)
     if args.evaluate:
