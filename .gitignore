@@ -39,3 +39,4 @@ dist/
 
 # archify working files
 .archify/
+.run-tour.pids
