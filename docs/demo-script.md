@@ -1,5 +1,23 @@
 # Demo script (about 10 minutes)
 
+**Short version: a 90-second video, [docs/demo/feature-tour.mp4](demo/feature-tour.mp4)**, with a numbered label on top of every moment (1 to 21, in order) naming the feature it shows:
+
+| Step | Feature shown | | Step | Feature shown |
+|---|---|---|---|---|
+| 1 | Dense (embedding) search alone: the right article is not found | | 12 | Mandatory ticket details collected before anything is sent |
+| 2 | Dense + SPLADE + reranker find it | | 13 | Text box locked while the ticket is reviewed |
+| 3 | JEV classifies the intent of every message | | 14 | Editing the ticket before it is sent |
+| 4 | Source and relevance score returned with the answer | | 15 | Nothing is created until the employee confirms |
+| 5 | Answers come only from the curated IT and HR knowledge base | | 16 | Ticket key and link returned |
+| 6 | Thumbs up / down on every answer | | 17 | JEV fails: the OpenAI classifier takes over |
+| 7 | Multi-turn: a follow-up understood from context | | 18 | Retrieve my tickets, to choose from |
+| 8 | Redis answer cache (the label shows the measured times) | | 19 | Current status and the latest support update |
+| 9 | Search quality check | | 20 | Ticket system down: honest message, no false success |
+| 10 | Outside the domain: politely declined | | 21 | Language model down: no invented answer |
+| 11 | Not in the knowledge base: nothing invented, ticket offered | | | |
+
+The retrieval and answer beats use the real models; the ticket-lookup and failure beats use the fake-provider stack, because it can seed tickets and inject failures on demand. The video is recorded by `e2e/demo/feature-tour.spec.ts` against four local instances (`e2e/demo/tour-stack.sh up`), then the dull part of each wait for a model is cut out and the result is fitted to 89.5 seconds (`e2e/demo/make-feature-tour.sh`; it needs `pip install imageio-ffmpeg`).
+
 Shows the three flows and the safety behaviour. Everything below was captured on the fake-provider stack (`docker compose up`), so the answer wording is a stand-in model quoting the knowledge base. With real providers the replies read more naturally; the behaviour is the same. A [recording of the ticket flow](demo/ticket-flow.webm) is included.
 
 **Setup:** `docker compose up -d --build --wait`, open <http://localhost:8000>. Accounts: `alice@buzztech.example` / `alice-demo-pass-1` and `bob@buzztech.example` / `bob-demo-pass-22`.
