@@ -18,7 +18,7 @@ COPY frontend/ ./
 RUN npm run build
 
 # Dependencies are installed here so that uv and build tools never reach the runtime image.
-FROM python:3.12-slim-bookworm AS builder
+FROM python:3.15-slim-bookworm AS builder
 COPY --from=ghcr.io/astral-sh/uv:0.11.8 /uv /usr/local/bin/uv
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy UV_PROJECT_ENVIRONMENT=/opt/venv
 WORKDIR /app/backend
@@ -29,7 +29,7 @@ RUN uv sync --frozen --no-dev --no-editable
 # Replaced by --build-context index=<dir>; empty when not supplied (the prod build then fails).
 FROM scratch AS index
 
-FROM python:3.12-slim-bookworm AS runtime
+FROM python:3.15-slim-bookworm AS runtime
 ENV PATH="/opt/venv/bin:$PATH" PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 \
     STATIC_DIR=/app/frontend/dist VECTOR_STORE_PATH=/app/data/chroma HOME=/home/tier0
 RUN useradd --system --uid 10001 --create-home tier0 && mkdir -p /app/data && chown tier0 /app/data
